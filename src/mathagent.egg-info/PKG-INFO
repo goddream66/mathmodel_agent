@@ -12,120 +12,503 @@ Requires-Dist: pymupdf>=1.23.0; extra == "ocr"
 Requires-Dist: pillow>=10.0.0; extra == "ocr"
 Requires-Dist: numpy>=2.0.0; extra == "ocr"
 Requires-Dist: rapidocr-onnxruntime<1.3.0,>=1.2.0; extra == "ocr"
+Provides-Extra: solver
+Requires-Dist: numpy>=2.0.0; extra == "solver"
+Requires-Dist: pandas>=2.2.0; extra == "solver"
+Requires-Dist: scipy>=1.13.0; extra == "solver"
+Requires-Dist: pulp>=2.8.0; extra == "solver"
+Requires-Dist: networkx>=3.3; extra == "solver"
+Requires-Dist: openpyxl>=3.1.5; extra == "solver"
+Provides-Extra: web
+Requires-Dist: fastapi>=0.115.0; extra == "web"
+Requires-Dist: uvicorn>=0.30.6; extra == "web"
+Requires-Dist: python-multipart>=0.0.9; extra == "web"
 
-# 数学建模智能体（MathAgent）框架骨架
+﻿# MathAgent
 
-这个仓库的目标：把“数学建模竞赛/作业”的完整流程做成一个可复用的智能体框架，让它能从题目出发，产出：
-- 结构化建模思路（假设、符号、目标函数、约束）
-- 可复现实验（数据处理、求解、敏感性分析）
-- 可交付报告（摘要、模型、算法、结果、讨论、附录代码）
+一个面向数学建模场景的多智能体框架脚手架。当前仓库的目标不是“一步到位自动写完论文”，而是先把建模任务拆成清晰的角色、流程、提示词、工具接口和 LLM 配置层，方便你后续逐步增强。
 
-你可以把它理解成一条“流水线”：
-题目 →（理解与澄清）→（建模）→（求解与实验）→（验证）→（写作）
+## 项目定位
 
-## 你需要哪些“东西”（小白版）
+这个项目目前更适合做三件事：
 
-### 1) 大模型（LLM）
-相当于“脑子”，负责推理、写作、提出方案。框架会把它当作一个可替换的组件：你用什么模型都行（本地/云端）。
+- 作为数学建模智能体的基础框架
+- 快速验证多智能体协作流程
+- 逐步接入你自己的模型、中转站、工具链和论文生成能力
 
-### 2) Tool / MCP（相当于“手”）
-智能体光会想还不够，还要会“做”。常见能力：
-- 跑 Python 做计算、画图、仿真
-- 读写文件（数据、图片、论文、模板）
-- 搜索资料（竞赛套路、算法要点、参数含义）
-- 调用求解器（线性规划、整数规划、最短路、最小费用流、非线性优化等）
+当前整体流程大致是：
 
-MCP 可以理解为“标准插口”：只要某个外部能力按 MCP 的规则提供服务，智能体就能像插 USB 一样接上用（不必每次手写对接逻辑）。
+1. `Manager` 负责任务编排
+2. `Modeling` 负责题目拆解、问题分析、建模方案组织
+3. `Coding` 负责求解与产物生成
+4. `Review` 负责检查结果与报告
+5. `Writing` 负责把分析结果组织成论文草稿
 
-### 3) Skill（相当于“招式/套路”）
-Skill 是可复用的“任务套路”，比如：
-- “把题目转成数学符号与假设”
-- “挑选合适模型（回归/分类/规划/图论/仿真）”
-- “自动生成实验计划（对比基线、做消融、做敏感性分析）”
-- “把结果写成论文段落（含表格/图注）”
+## 当前代码结构
 
-在这个仓库里，Skill 会被做成可以组合的模块：你随时能新增、替换、打包复用。
-
-### 4) Memory / Knowledge（相当于“笔记本/资料库”）
-两类记忆最有用：
-- 项目记忆：当前题目的变量定义、关键假设、已选方法、实验结论
-- 资料库：常见建模模板、算法清单、写作模板、过往案例
-
-### 5) Guardrails（相当于“质检”）
-建模智能体最容易“看起来很像，但其实不对”。所以要有自动检查：
-- 量纲/单位检查
-- 约束是否自洽、变量是否定义
-- 结果是否可复现（随机种子、依赖版本、输出文件）
-- 结论是否和图表/数值一致
-
-## 本仓库的代码结构（骨架）
-
-```
+```text
 src/mathagent/
-  app.py              # 入口：一次建模任务怎么跑
-  orchestrator.py     # 流程编排：按阶段调用 skills/tools
-  state.py            # 统一的任务状态（题目、假设、模型、结果）
-  skills/             # “招式”：每个阶段一个可插拔模块
-  tools/              # “手”：统一工具接口与注册表（可接 MCP）
-tests/
+  app.py                 # 程序入口
+  orchestrator.py        # 流程编排骨架
+  state.py               # 统一状态对象
+  prompts.py             # Prompt 加载与渲染
+  agents/
+    base.py              # Agent 基类
+    manager.py           # ManagerAgent
+    specialists.py       # Modeling / Coding / Review / Writing
+  llm/
+    config.py            # LLM 配置加载：优先读 config/llm.json，回退到环境变量
+    factory.py           # provider 到具体客户端的构建工厂
+    openai_compat.py     # OpenAI 兼容接口客户端
+    dashscope.py         # DashScope 客户端
+    custom_http.py       # 自定义 HTTP 中转接口客户端
+  skills/
+    ...                  # 各阶段可插拔技能
+  tools/
+    ...                  # 工具注册与抽象
+  memory/
+    ...                  # 运行时记忆存储
 ```
 
-## 运行方式（先跑通骨架）
+## 安装
 
-1) 创建虚拟环境（可选）
-2) 安装为可编辑模式（推荐，便于开发）：
+推荐先用可编辑模式安装：
 
 ```bash
 python -m pip install -e .
 ```
 
-3) 如果要读取 PDF 题目，额外安装：
+如果你需要读取 PDF 题目：
 
 ```bash
 python -m pip install -e .[pdf]
 ```
 
-4) 如果 PDF 里有图片（表格截图/图表），并且你希望识别图片里的文字，额外安装 OCR：
+如果 PDF 里有图片，并且你还想做 OCR：
 
 ```bash
 python -m pip install -e .[ocr]
 ```
 
-5) 运行：
+如果你希望 `Coding` 阶段优先尝试真实数值库和求解器模板，可以额外安装：
+
+```bash
+python -m pip install -e .[solver]
+```
+
+这组可选依赖会为 fallback solver 提供更强的实现机会，包括：
+
+- `numpy`
+- `pandas`
+- `scipy`
+- `pulp`
+- `networkx`
+- `openpyxl`
+
+如果你要启动 Web 后端接口，可以额外安装：
+
+```bash
+python -m pip install -e .[web]
+```
+
+## 运行
+
+最简单的运行方式：
 
 ```bash
 python -m mathagent
 ```
 
-你会看到一个“空实现但可跑”的流程输出。接下来你要做的就是：
-- 把 LLM 适配器接入（把“脑子”接上）
-- 把 Python 执行/求解器/搜索 等工具接入（把“手”接上）
-- 逐个完善 Skills（把“套路”补齐）
-
-## 多厂商 LLM 接入（每个 agent 独立配置）
-
-当前采用“OpenAI 兼容接口”作为统一接入层：只要厂商/中转站提供 OpenAI 风格的接口（`/v1/chat/completions`），就能接入。
-
-每个 agent 可以单独配置自己的 `PROVIDER / BASE_URL / API_KEY / MODEL`（用环境变量区分）：
-- `MODELING_API_KEY` / `MODELING_BASE_URL` / `MODELING_MODEL` / `MODELING_PROVIDER`
-- `CODING_API_KEY` / `CODING_BASE_URL` / `CODING_MODEL` / `CODING_PROVIDER`
-- `WRITING_API_KEY` / `WRITING_BASE_URL` / `WRITING_MODEL` / `WRITING_PROVIDER`
-- `MANAGER_API_KEY` / `MANAGER_BASE_URL` / `MANAGER_MODEL` / `MANAGER_PROVIDER`
-
-示例（OpenAI）：
+带题目文件运行：
 
 ```bash
-set MODELING_PROVIDER=openai
-set MODELING_BASE_URL=https://api.openai.com
-set MODELING_API_KEY=你的key
-set MODELING_MODEL=gpt-4o-mini
+python -m mathagent --problem-file problems/your_problem.txt
 ```
 
-示例（中转站/代理，OpenAI 兼容）：
+带表格数据运行：
 
 ```bash
-set WRITING_PROVIDER=openai_compat
-set WRITING_BASE_URL=https://你的中转站域名
-set WRITING_API_KEY=你的key
-set WRITING_MODEL=你在中转站配置的模型名
+python -m mathagent --problem-file problems/your_problem.txt --data-file data/forecast_series.csv
 ```
+
+也支持 Excel：
+
+```bash
+python -m mathagent --problem-file problems/your_problem.txt --data-file data/forecast_series.xlsx
+```
+
+如果有多个数据文件，可以重复传入：
+
+```bash
+python -m mathagent --problem-file problems/your_problem.txt --data-file data/items.csv --data-file data/edges.csv
+```
+
+进入命令行多轮对话模式：
+
+```bash
+python -m mathagent --chat
+```
+
+启动 Web API：
+
+```bash
+python -m uvicorn mathagent.web.api:app --reload
+```
+
+再启动 React 前端：
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+默认情况下：
+
+- FastAPI 文档在 `http://127.0.0.1:8000/docs`
+- React 前端在 `http://127.0.0.1:5173`
+
+在聊天模式下，你可以连续补充题目、约束、数据说明和论文要求，然后输入 `/run` 生成最新分析与论文草稿。
+
+如果你只想导出或查看某几章，可以使用章节筛选：
+
+```bash
+python -m mathagent --problem-file problems/your_problem.txt --report-section abstract --report-section results
+```
+
+这会保留完整 `report.md`，同时额外输出一个只含选定章节的 `report_selected.md`。
+
+聊天模式下可用的新命令：
+
+- `/sections`：查看可用章节和当前筛选状态
+- `/sections abstract results`：把当前报告输出切到指定章节
+- `/sections all`：恢复完整报告
+- `/report`：查看当前筛选后的报告
+- `/report abstract conclusion`：临时查看指定章节
+
+常见参数：
+
+- `--problem-file`：输入题目文件，支持文本和 PDF 处理流程
+- `--data-file`：附加 CSV、JSON 或 XLSX 数据文件，可重复传入
+- `--db-path`：运行记忆数据库路径，默认 `data/mathagent.db`
+- `--out-dir`：输出目录，默认 `outputs`
+- `--report-section`：只导出指定章节，可重复传入
+- `--ocr`：处理 PDF 时启用 OCR
+- `--ocr-mode`：OCR 模式，可选 `auto`、`images`、`page`
+
+## Web 端说明
+
+现在仓库里已经补了一套 Web 版基础结构，开发顺序和职责是分开的：
+
+- Python 侧继续负责多智能体编排、求解、报告生成
+- `FastAPI` 负责把会话、上传、运行、报告读取能力暴露成接口
+- `React + Vite` 负责聊天界面、文件上传、报告预览、章节筛选和状态展示
+
+后端接口入口：
+
+- `src/mathagent/web/api.py`
+
+后端会话服务：
+
+- `src/mathagent/web/service.py`
+
+前端目录：
+
+- `frontend/`
+
+当前 Web API 已提供这些核心接口：
+
+- `POST /api/sessions`
+- `POST /api/sessions/{session_id}/messages`
+- `POST /api/sessions/{session_id}/files`
+- `POST /api/sessions/{session_id}/sections`
+- `POST /api/sessions/{session_id}/run`
+- `GET /api/sessions/{session_id}/report`
+- `GET /api/meta`
+
+前端页面当前已经接上：
+
+- 多轮聊天输入
+- 题目文件上传
+- 数据文件上传
+- 生成论文草稿
+- Markdown 报告渲染
+- 章节筛选
+- 子问题/求解/审稿状态面板
+
+程序运行后会在输出目录里生成：
+
+- `problem_text.md`
+- `report.md`（如果生成成功）
+- `report_selected.md`（使用 `--report-section` 时）
+- `chat_transcript.md` 和 `chat_report.md`（使用 `--chat` 时）
+- `chat_report_selected.md`（聊天模式启用章节筛选后）
+
+## 表格数据约定
+
+现在的数据加载层会先做一轮表格语义识别，再把结果传给 `Coding` 阶段，所以列名不一定非得写成固定的英文单词。
+
+当前重点增强了几类常见别名：
+
+- 预测类：`date`、`time`、`period`、`day`、`demand`、`sales`、`qty`、`quantity`、`value`
+- 优化类：`cost`、`price`、`expense`、`budget`、`value`、`profit`、`revenue`、`benefit`
+- 路径/网络类：`source`、`from`、`start`、`target`、`to`、`end`、`weight`、`distance`、`cost`
+- 评价类：`score`、`metric`、`index`、`weight`
+
+也就是说，像下面这些列名现在都更容易被模板识别：
+
+- 预测数据：`qty_sold`、`period`
+- 路径数据：`from_node`、`to_node`、`travel_cost`
+- 优化数据：`expense`、`benefit`
+
+如果你装了 `.[solver]`，现在也可以直接读 `.xlsx`。单个工作表会按一个表处理，多工作表会拆成多个表传给求解阶段。
+
+## LLM 配置说明
+
+这一节是最重要的。现在推荐的配置方式是：
+
+1. 复制 `config/llm.example.json`
+2. 重命名为 `config/llm.json`
+3. 在里面填写你自己的接口信息
+
+仓库已经通过 `.gitignore` 忽略了 `config/llm.json`，所以真实 API Key 建议只放在本地文件里，不要提交到 GitHub。
+
+### 1. 推荐方式：`config/llm.json`
+
+最小示例：
+
+```json
+{
+  "MODELING": {
+    "provider": "openai_compat",
+    "base_url": "https://api.openai.com",
+    "api_key": "your-modeling-key",
+    "model": "gpt-4o-mini"
+  },
+  "WRITING": {
+    "provider": "openai_compat",
+    "base_url": "https://api.openai.com",
+    "api_key": "your-writing-key",
+    "model": "gpt-4o-mini"
+  }
+}
+```
+
+当前支持的角色段名有：
+
+- `MANAGER`
+- `MODELING`
+- `CODING`
+- `REVIEW`
+- `WRITING`
+
+也就是说，`config/llm.json` 顶层就写这些 key。
+
+完整示例：
+
+```json
+{
+  "MANAGER": {
+    "provider": "openai_compat",
+    "base_url": "https://api.openai.com",
+    "api_key": "your-manager-key",
+    "model": "gpt-4o-mini"
+  },
+  "MODELING": {
+    "provider": "openai_compat",
+    "base_url": "https://api.openai.com",
+    "api_key": "your-modeling-key",
+    "model": "gpt-4o-mini"
+  },
+  "CODING": {
+    "provider": "openai_compat",
+    "base_url": "https://api.openai.com",
+    "api_key": "your-coding-key",
+    "model": "gpt-4o-mini"
+  },
+  "REVIEW": {
+    "provider": "openai_compat",
+    "base_url": "https://api.openai.com",
+    "api_key": "your-review-key",
+    "model": "gpt-4o-mini"
+  },
+  "WRITING": {
+    "provider": "openai_compat",
+    "base_url": "https://api.openai.com",
+    "api_key": "your-writing-key",
+    "model": "gpt-4o-mini"
+  }
+}
+```
+
+字段说明：
+
+- `provider`：provider 名称
+- `base_url`：接口域名
+- `api_key`：你的密钥
+- `model`：模型名
+- `options`：特殊 provider 的附加参数，普通 OpenAI 兼容接口一般不需要
+
+### 2. 当前支持的 provider
+
+当前支持这些 provider：
+
+- `openai`
+- `openai_compat`
+- `deepseek`
+- `qwen`
+- `bytedance`
+- `google`
+- `aliyun`
+- `dashscope`
+- `alibaba`
+- `custom_http`
+
+含义可以简单理解成：
+
+- `openai`、`openai_compat`、`deepseek`、`qwen`、`bytedance`、`google`
+  这些名称当前都走 OpenAI 兼容客户端
+- `aliyun`、`dashscope`、`alibaba`
+  这些名称当前走 DashScope 客户端
+- `custom_http`
+  给那些不完全兼容 OpenAI 格式的中转站或自建接口使用
+
+### 3. 什么叫 OpenAI 兼容
+
+“OpenAI 兼容”指的是对方接口大体遵循 OpenAI Chat Completions 的请求和返回格式。常见特征包括：
+
+- 路径类似 `/v1/chat/completions`
+- 请求体可以传 `model`、`messages`、`temperature`
+- 返回体里可以从 `choices.0.message.content` 取到文本
+
+如果你的中转站满足这一套，通常直接这样配就够了：
+
+```json
+{
+  "WRITING": {
+    "provider": "openai_compat",
+    "base_url": "https://your-relay.example.com",
+    "api_key": "your-key",
+    "model": "your-model-name"
+  }
+}
+```
+
+### 4. 如果中转站不完全兼容：使用 `custom_http`
+
+如果你的接口存在下面这些情况：
+
+- 请求路径不是 `/v1/chat/completions`
+- 认证头不是标准 Bearer
+- 请求体字段名不一样
+- 返回 JSON 里的文本路径不一样
+
+就可以使用 `custom_http`。
+
+示例：
+
+```json
+{
+  "WRITING": {
+    "provider": "custom_http",
+    "base_url": "https://your-relay.example.com",
+    "api_key": "your-writing-key",
+    "model": "relay-model-name",
+    "options": {
+      "path": "/v1/chat/completions",
+      "headers": {
+        "Authorization": "Bearer {api_key}",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "model": "{model}",
+        "messages": "$messages",
+        "temperature": "$temperature"
+      },
+      "response_path": "choices.0.message.content"
+    }
+  }
+}
+```
+
+这些配置项分别表示：
+
+- `path`：请求路径，会和 `base_url` 拼接
+- `headers`：自定义请求头
+- `body`：自定义请求体模板
+- `response_path`：从返回 JSON 中提取文本的路径
+
+模板里可用的占位符有：
+
+- `"{api_key}"`
+- `"{model}"`
+- `"{base_url}"`
+- `"$messages"`
+- `"$temperature"`
+
+例如：
+
+- `Authorization: "Bearer {api_key}"` 会自动替换成真实 key
+- `"messages": "$messages"` 会自动替换成消息数组
+- `"temperature": "$temperature"` 会自动替换成当前温度
+
+### 5. 环境变量仍然可以用，但现在是回退方案
+
+程序会优先读 `config/llm.json`。如果这个文件不存在，再回退到环境变量。
+
+PowerShell 示例：
+
+```powershell
+$env:MODELING_PROVIDER = "openai_compat"
+$env:MODELING_BASE_URL = "https://api.openai.com"
+$env:MODELING_API_KEY = "your-key"
+$env:MODELING_MODEL = "gpt-4o-mini"
+```
+
+命名规则是：
+
+- `<角色名>_PROVIDER`
+- `<角色名>_BASE_URL`
+- `<角色名>_API_KEY`
+- `<角色名>_MODEL`
+
+例如：
+
+- `MANAGER_API_KEY`
+- `MODELING_API_KEY`
+- `CODING_API_KEY`
+- `REVIEW_API_KEY`
+- `WRITING_API_KEY`
+
+### 6. 你现在最推荐的配置方式
+
+如果你现在的目标只是先跑通项目，建议直接这样做：
+
+1. 复制 `config/llm.example.json` 为 `config/llm.json`
+2. 先配置 `MODELING` 和 `WRITING`
+3. 如果接口是标准 OpenAI 风格，优先用 `openai_compat`
+4. 只有当中转站的请求或返回格式不标准时，再改用 `custom_http`
+
+补充说明：
+
+- 当前代码里，`MODELING` 和 `WRITING` 是直接会用到 LLM 的核心角色
+- `MANAGER` 的配置会被记录到运行记忆里，方便后续扩展
+- `CODING` 和 `REVIEW` 的配置段已经预留好了，后续你可以继续把它们接上
+
+## 测试
+
+运行测试：
+
+```bash
+python -m pytest -q tests
+```
+
+## 后续建议
+
+如果你下一步想把它真正做成“可多轮对话、最终出论文”的系统，比较推荐按这个顺序继续补：
+
+1. 先稳定 `MODELING` 的输出结构
+2. 给 `CODING` 接入真正的求解工具或 Python 执行能力
+3. 强化 `REVIEW` 的校验逻辑
+4. 把 `WRITING` 的论文模板和章节控制做细
+5. 再加前端或聊天入口，支持多轮交互

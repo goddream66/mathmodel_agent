@@ -4,3 +4,6 @@ __pycache__/
 pytest-cache-files-*
 trea_mathagent/
 config/llm.json
+frontend/node_modules/
+frontend/dist/
+outputs/web_sessions/

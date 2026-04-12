@@ -79,6 +79,12 @@ python -m pip install -e .[solver]
 - `networkx`
 - `openpyxl`
 
+如果你要启动 Web 后端接口，可以额外安装：
+
+```bash
+python -m pip install -e .[web]
+```
+
 ## 运行
 
 最简单的运行方式：
@@ -117,6 +123,25 @@ python -m mathagent --problem-file problems/your_problem.txt --data-file data/it
 python -m mathagent --chat
 ```
 
+启动 Web API：
+
+```bash
+python -m uvicorn mathagent.web.api:app --reload
+```
+
+再启动 React 前端：
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+默认情况下：
+
+- FastAPI 文档在 `http://127.0.0.1:8000/docs`
+- React 前端在 `http://127.0.0.1:5173`
+
 在聊天模式下，你可以连续补充题目、约束、数据说明和论文要求，然后输入 `/run` 生成最新分析与论文草稿。
 
 如果你只想导出或查看某几章，可以使用章节筛选：
@@ -144,6 +169,46 @@ python -m mathagent --problem-file problems/your_problem.txt --report-section ab
 - `--report-section`：只导出指定章节，可重复传入
 - `--ocr`：处理 PDF 时启用 OCR
 - `--ocr-mode`：OCR 模式，可选 `auto`、`images`、`page`
+
+## Web 端说明
+
+现在仓库里已经补了一套 Web 版基础结构，开发顺序和职责是分开的：
+
+- Python 侧继续负责多智能体编排、求解、报告生成
+- `FastAPI` 负责把会话、上传、运行、报告读取能力暴露成接口
+- `React + Vite` 负责聊天界面、文件上传、报告预览、章节筛选和状态展示
+
+后端接口入口：
+
+- `src/mathagent/web/api.py`
+
+后端会话服务：
+
+- `src/mathagent/web/service.py`
+
+前端目录：
+
+- `frontend/`
+
+当前 Web API 已提供这些核心接口：
+
+- `POST /api/sessions`
+- `POST /api/sessions/{session_id}/messages`
+- `POST /api/sessions/{session_id}/files`
+- `POST /api/sessions/{session_id}/sections`
+- `POST /api/sessions/{session_id}/run`
+- `GET /api/sessions/{session_id}/report`
+- `GET /api/meta`
+
+前端页面当前已经接上：
+
+- 多轮聊天输入
+- 题目文件上传
+- 数据文件上传
+- 生成论文草稿
+- Markdown 报告渲染
+- 章节筛选
+- 子问题/求解/审稿状态面板
 
 程序运行后会在输出目录里生成：
 

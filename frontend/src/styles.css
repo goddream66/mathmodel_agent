@@ -1,0 +1,443 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+:root {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  color: #102326;
+  background:
+    radial-gradient(circle at top left, rgba(255, 142, 110, 0.22), transparent 30%),
+    radial-gradient(circle at right, rgba(28, 160, 155, 0.2), transparent 24%),
+    linear-gradient(180deg, #f4efe2 0%, #f8f5ed 42%, #eef6f3 100%);
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --panel-bg: rgba(255, 252, 247, 0.82);
+  --panel-border: rgba(16, 35, 38, 0.12);
+  --shadow: 0 24px 60px rgba(16, 35, 38, 0.09);
+  --accent: #0f766e;
+  --accent-strong: #0a4f54;
+  --warm: #c65d3b;
+  --muted: #4d6365;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+textarea,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.hero-card,
+.panel,
+.error-banner {
+  border: 1px solid var(--panel-border);
+  border-radius: 28px;
+  backdrop-filter: blur(18px);
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+}
+
+.hero-card {
+  display: grid;
+  gap: 24px;
+  align-items: end;
+  padding: 28px;
+  margin-bottom: 24px;
+  animation: rise-in 500ms ease-out;
+}
+
+.hero-card h1 {
+  margin: 6px 0 12px;
+  font-size: clamp(2rem, 4vw, 3.8rem);
+  line-height: 0.96;
+  max-width: 12ch;
+}
+
+.hero-copy,
+.hero-note,
+.muted-block,
+.message-meta,
+.upload-copy,
+.stat-card span,
+.eyebrow {
+  color: var(--muted);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.hero-copy {
+  margin: 0;
+  max-width: 70ch;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+
+.accent-button,
+.ghost-button,
+.section-chip {
+  border: none;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    opacity 180ms ease;
+}
+
+.accent-button {
+  padding: 14px 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--warm), #e48652);
+  color: white;
+  font-weight: 700;
+}
+
+.accent-button:hover:not(:disabled),
+.ghost-button:hover:not(:disabled),
+.section-chip:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.ghost-button {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(16, 35, 38, 0.06);
+  color: #102326;
+}
+
+.accent-button:disabled,
+.ghost-button:disabled,
+.section-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.error-banner {
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  border-color: rgba(198, 93, 59, 0.35);
+  color: #8a2f16;
+  background: rgba(255, 244, 239, 0.92);
+}
+
+.dashboard-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.left-stack,
+.right-stack {
+  display: grid;
+  gap: 20px;
+}
+
+.panel {
+  padding: 22px;
+  animation: rise-in 560ms ease-out;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.panel-header h2,
+.upload-lists h3,
+.subproblem-card h3 {
+  margin: 4px 0 0;
+}
+
+.pill,
+.mini-tag,
+.file-list code,
+.section-chip code {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.pill {
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+}
+
+.chat-stream,
+.markdown-shell {
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(16, 35, 38, 0.08);
+}
+
+.chat-stream {
+  min-height: 220px;
+  max-height: 420px;
+  overflow: auto;
+  padding: 16px;
+}
+
+.message-card {
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(255, 255, 255, 0.65));
+  border: 1px solid rgba(15, 118, 110, 0.08);
+}
+
+.message-card + .message-card {
+  margin-top: 12px;
+}
+
+.message-card p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.composer {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.composer textarea {
+  resize: vertical;
+  min-height: 130px;
+  border-radius: 20px;
+  border: 1px solid rgba(16, 35, 38, 0.12);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 16px;
+  color: #102326;
+}
+
+.upload-grid,
+.upload-lists,
+.status-grid,
+.section-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.upload-box {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px dashed rgba(16, 35, 38, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(238, 246, 243, 0.55));
+}
+
+.upload-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.upload-box input[type="file"] {
+  margin-top: 4px;
+}
+
+.upload-lists {
+  margin-top: 18px;
+}
+
+.file-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.file-list li,
+.subproblem-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(16, 35, 38, 0.08);
+}
+
+.file-list code,
+.section-chip code,
+.mini-tag {
+  font-size: 0.74rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(16, 35, 38, 0.06);
+}
+
+.status-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stat-card {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.stat-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.6rem;
+}
+
+.status-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-top: 12px;
+}
+
+.status-dot.idle {
+  background: #0f766e;
+  box-shadow: 0 0 0 8px rgba(15, 118, 110, 0.12);
+}
+
+.status-dot.busy {
+  background: #c65d3b;
+  box-shadow: 0 0 0 8px rgba(198, 93, 59, 0.14);
+}
+
+.status-subproblems {
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.subproblem-card {
+  flex-direction: column;
+  align-items: start;
+}
+
+.subproblem-card p {
+  margin: 6px 0 0;
+}
+
+.subproblem-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.section-grid {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.section-chip {
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(16, 35, 38, 0.08);
+  display: grid;
+  gap: 10px;
+}
+
+.section-chip.active {
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.18), rgba(255, 255, 255, 0.82));
+  border-color: rgba(15, 118, 110, 0.22);
+}
+
+.markdown-shell {
+  padding: 26px;
+  overflow: auto;
+}
+
+.markdown-shell h1,
+.markdown-shell h2,
+.markdown-shell h3 {
+  line-height: 1.1;
+}
+
+.markdown-shell pre {
+  padding: 14px;
+  border-radius: 18px;
+  background: #112123;
+  color: #eff9f7;
+  overflow: auto;
+}
+
+.markdown-shell code {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.empty-state,
+.muted-block {
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.report-empty {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+@media (min-width: 1100px) {
+  .hero-card {
+    grid-template-columns: 1.6fr 0.9fr;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding: 16px;
+  }
+
+  .panel,
+  .hero-card {
+    border-radius: 22px;
+    padding: 18px;
+  }
+
+  .status-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
