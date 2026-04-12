@@ -1,0 +1,13 @@
+{
+  "subproblem_count": 1,
+  "subproblem_titles": [
+    "问题"
+  ],
+  "recommended_methods": [
+    "基线模型 + 对比实验"
+  ],
+  "detected_numbers": [
+    1.0,
+    2.0
+  ]
+}

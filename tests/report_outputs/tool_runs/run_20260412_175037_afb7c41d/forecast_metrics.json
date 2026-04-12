@@ -1,0 +1,11 @@
+{
+  "series": [
+    5.0,
+    7.0,
+    9.0,
+    11.0
+  ],
+  "baseline_average": 8.0,
+  "baseline_trend": 1.9999999999999996,
+  "forecast_value": 13.0
+}

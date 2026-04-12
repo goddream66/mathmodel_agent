@@ -1,0 +1,1 @@
+{"MODELING": {"provider": "custom_http", "base_url": "https://relay.example.com", "api_key": "abc", "model": "demo", "options": {"path": "/chat"}}}

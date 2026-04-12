@@ -1,0 +1,31 @@
+{
+  "subproblem_title": "Problem 2",
+  "status": "ok",
+  "method": "线性规划",
+  "objective": "构建目标函数并求得最优决策方案。",
+  "assumptions": [
+    "变量定义清晰且可以被观测、估计或求解。",
+    "原始题面没有说明的外部环境在分析周期内保持相对稳定。",
+    "成本、收益或资源参数在求解区间内可视为已知。"
+  ],
+  "constraints": [
+    "需要明确资源上限、容量约束和业务规则。"
+  ],
+  "result_summary": "Created a structured baseline result. Detected numerical signals in the subproblem text.",
+  "evidence": [
+    "chosen_method=线性规划",
+    "number_count=1"
+  ],
+  "numeric_results": {
+    "detected_number_count": 1,
+    "first_number": 100.0
+  },
+  "artifacts": [
+    "result.json",
+    "solver_notes.md"
+  ],
+  "next_steps": [
+    "Replace fallback logic with a domain-specific solver if numeric accuracy matters.",
+    "Provide data tables or parameters for formal optimization or forecasting."
+  ]
+}

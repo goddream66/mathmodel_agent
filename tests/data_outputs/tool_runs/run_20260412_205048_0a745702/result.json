@@ -1,0 +1,40 @@
+{
+  "subproblem_title": "Problem 1",
+  "status": "ok",
+  "method": "线性/非线性回归",
+  "objective": "建立预测模型并给出可解释的误差评估。",
+  "assumptions": [
+    "变量定义清晰且可以被观测、估计或求解。",
+    "原始题面没有说明的外部环境在分析周期内保持相对稳定。",
+    "历史数据对未来具有一定代表性。"
+  ],
+  "constraints": [
+    "训练与验证数据划分方式需要保持时序一致。"
+  ],
+  "result_summary": "Built a baseline forecast for horizon=2 using 5 historical points with numpy.",
+  "evidence": [
+    "template_used=baseline_forecast_template",
+    "library_used=numpy",
+    "table_name=forecast_alias_series",
+    "selected_column=qty_sold",
+    "historical_point_count=5",
+    "average_value=15.2",
+    "average_delta=2.8000000000000003"
+  ],
+  "numeric_results": {
+    "forecast_horizon": 2,
+    "historical_point_count": 5,
+    "baseline_average": 15.2,
+    "rolling_mean": 18.0,
+    "baseline_trend": 2.8,
+    "forecast_value": 23.8
+  },
+  "artifacts": [
+    "result.json",
+    "forecast_metrics.json"
+  ],
+  "next_steps": [
+    "Replace the baseline extrapolation with a time-series model if full data is available.",
+    "Validate the forecast with MAE, RMSE, or MAPE once a hold-out set is available."
+  ]
+}

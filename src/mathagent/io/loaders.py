@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import csv
 import io
+import json
 from pathlib import Path
+from typing import Any
 
 
 def load_problem_text(
@@ -26,6 +29,119 @@ def load_problem_text(
         return "\n\n".join(["## OCR（图片文字识别）", ocr_text]).strip()
 
     return p.read_text(encoding="utf-8")
+
+
+def load_supporting_data(paths: list[str | Path]) -> dict[str, Any]:
+    tables: list[dict[str, Any]] = []
+    for raw_path in paths:
+        path = Path(raw_path)
+        suffix = path.suffix.lower()
+        if suffix == ".csv":
+            tables.append(_load_csv_table(path))
+            continue
+        if suffix == ".json":
+            tables.extend(_load_json_tables(path))
+            continue
+        raise RuntimeError(f"Unsupported data file format: {path}")
+
+    return {
+        "tables": tables,
+        "table_names": [table["name"] for table in tables],
+        "table_count": len(tables),
+    }
+
+
+def _load_csv_table(path: Path) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        rows = [{str(k): _coerce_cell(v) for k, v in row.items()} for row in reader]
+        columns = list(reader.fieldnames or [])
+    return {
+        "name": path.stem,
+        "source": str(path),
+        "kind": "table",
+        "columns": columns,
+        "rows": rows,
+        "row_count": len(rows),
+    }
+
+
+def _load_json_tables(path: Path) -> list[dict[str, Any]]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    tables: list[dict[str, Any]] = []
+
+    if isinstance(data, list) and all(isinstance(item, dict) for item in data):
+        columns = _infer_columns(data)
+        tables.append(
+            {
+                "name": path.stem,
+                "source": str(path),
+                "kind": "table",
+                "columns": columns,
+                "rows": [{str(k): _coerce_cell(v) for k, v in row.items()} for row in data],
+                "row_count": len(data),
+            }
+        )
+        return tables
+
+    if isinstance(data, dict):
+        if "tables" in data and isinstance(data["tables"], list):
+            for index, item in enumerate(data["tables"], start=1):
+                if not isinstance(item, dict):
+                    continue
+                rows = item.get("rows")
+                if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+                    continue
+                columns = list(item.get("columns") or _infer_columns(rows))
+                tables.append(
+                    {
+                        "name": str(item.get("name") or f"{path.stem}_{index}"),
+                        "source": str(path),
+                        "kind": "table",
+                        "columns": columns,
+                        "rows": [{str(k): _coerce_cell(v) for k, v in row.items()} for row in rows],
+                        "row_count": len(rows),
+                    }
+                )
+            return tables
+
+        tables.append(
+            {
+                "name": path.stem,
+                "source": str(path),
+                "kind": "json",
+                "data": data,
+            }
+        )
+        return tables
+
+    raise RuntimeError(f"Unsupported JSON table structure: {path}")
+
+
+def _infer_columns(rows: list[dict[str, Any]]) -> list[str]:
+    columns: list[str] = []
+    seen: set[str] = set()
+    for row in rows:
+        for key in row.keys():
+            key_str = str(key)
+            if key_str not in seen:
+                seen.add(key_str)
+                columns.append(key_str)
+    return columns
+
+
+def _coerce_cell(value: Any) -> Any:
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped == "":
+            return ""
+        try:
+            if "." in stripped:
+                return float(stripped)
+            return int(stripped)
+        except ValueError:
+            return stripped
+    return value
 
 
 def _extract_text_from_pdf(path: Path) -> str:

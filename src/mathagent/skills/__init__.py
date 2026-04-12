@@ -1,5 +1,5 @@
 from .base import Skill
-from .builtin import (
+from .workflow_v4 import (
     ClarifySkill,
     IntakeSkill,
     ModelSkill,
@@ -7,7 +7,7 @@ from .builtin import (
     SolveSkill,
     ValidateSkill,
 )
-from .problem_analysis import ProblemDecomposeSkill, SubProblemAnalyzeSkill
+from .analysis_v2 import ProblemDecomposeSkill, SubProblemAnalyzeSkill
 
 __all__ = [
     "Skill",

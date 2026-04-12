@@ -1,0 +1,120 @@
+{
+  "problem_text": "Problem 1: forecast demand for 7 days.\nProblem 2: optimize cost with budget 100.",
+  "clarifications": [
+    "问题 的硬约束和软约束分别是什么？"
+  ],
+  "subproblem_index": 1,
+  "subproblem": {
+    "title": "问题",
+    "text": "Problem 1: forecast demand for 7 days.\nProblem 2: optimize cost with budget 100.",
+    "analysis": {
+      "task_types": [
+        "通用建模"
+      ],
+      "candidate_models": [
+        "基线模型 + 对比实验"
+      ],
+      "solution_plan": [
+        "先明确输入、输出、约束和评价指标，避免模型目标漂移。",
+        "先给出一个可计算的基线模型。",
+        "再做对比分析和结果解释。"
+      ],
+      "key_variables": [
+        "核心状态变量"
+      ],
+      "needed_data": [
+        "题目中涉及的输入参数和边界条件"
+      ],
+      "evaluation": [
+        "检查假设是否合理、变量定义是否一致。"
+      ],
+      "notes": [
+        "先把题目里的变量、单位、边界条件统一。",
+        "避免在没有数据支撑时直接给出数值结论。",
+        "建议先做基线模型，再逐步增加复杂度。"
+      ],
+      "objective": "把题目转写成可计算、可解释、可验证的模型。",
+      "constraints": [],
+      "assumptions": [
+        "变量定义清晰且可以被观测、估计或求解。",
+        "原始题面没有说明的外部环境在分析周期内保持相对稳定。"
+      ],
+      "deliverables": [
+        "结构化建模思路",
+        "关键公式或算法流程",
+        "可复核的结论说明"
+      ],
+      "formulation_steps": [
+        "目标定义：把题目转写成可计算、可解释、可验证的模型。"
+      ],
+      "chosen_method": "基线模型 + 对比实验",
+      "confidence": 0.55
+    }
+  },
+  "all_subproblems": [
+    {
+      "title": "问题",
+      "text": "Problem 1: forecast demand for 7 days.\nProblem 2: optimize cost with budget 100.",
+      "analysis": {
+        "task_types": [
+          "通用建模"
+        ],
+        "candidate_models": [
+          "基线模型 + 对比实验"
+        ],
+        "solution_plan": [
+          "先明确输入、输出、约束和评价指标，避免模型目标漂移。",
+          "先给出一个可计算的基线模型。",
+          "再做对比分析和结果解释。"
+        ],
+        "key_variables": [
+          "核心状态变量"
+        ],
+        "needed_data": [
+          "题目中涉及的输入参数和边界条件"
+        ],
+        "evaluation": [
+          "检查假设是否合理、变量定义是否一致。"
+        ],
+        "notes": [
+          "先把题目里的变量、单位、边界条件统一。",
+          "避免在没有数据支撑时直接给出数值结论。",
+          "建议先做基线模型，再逐步增加复杂度。"
+        ],
+        "objective": "把题目转写成可计算、可解释、可验证的模型。",
+        "constraints": [],
+        "assumptions": [
+          "变量定义清晰且可以被观测、估计或求解。",
+          "原始题面没有说明的外部环境在分析周期内保持相对稳定。"
+        ],
+        "deliverables": [
+          "结构化建模思路",
+          "关键公式或算法流程",
+          "可复核的结论说明"
+        ],
+        "formulation_steps": [
+          "目标定义：把题目转写成可计算、可解释、可验证的模型。"
+        ],
+        "chosen_method": "基线模型 + 对比实验",
+        "confidence": 0.55
+      }
+    }
+  ],
+  "model": {
+    "assumptions": [
+      "变量定义清晰且可以被观测、估计或求解。",
+      "原始题面没有说明的外部环境在分析周期内保持相对稳定。"
+    ],
+    "constraints": [],
+    "method_candidates": [
+      "基线模型 + 对比实验"
+    ],
+    "chosen_method": "基线模型 + 对比实验",
+    "formulation_outline": [
+      "目标定义：把题目转写成可计算、可解释、可验证的模型。"
+    ],
+    "evidence_gaps": [
+      "题目中涉及的输入参数和边界条件"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "subproblem_count": 2,
+  "subproblem_titles": [
+    "问题1",
+    "问题2"
+  ],
+  "recommended_methods": [
+    "线性/非线性回归",
+    "线性规划"
+  ],
+  "detected_numbers": [
+    1.0,
+    7.0,
+    2.0
+  ]
+}

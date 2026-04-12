@@ -5,11 +5,18 @@ from pathlib import Path
 
 _PROMPT_DIR = Path(__file__).resolve().parents[2] / "templates" / "prompts"
 
+
+class _SafeFormatDict(dict[str, str]):
+    def __missing__(self, key: str) -> str:
+        return ""
+
 _DEFAULT_PROMPTS: dict[str, str] = {
     "modeling_system": (
         "You are an expert in mathematical modeling competitions. "
         "Break the problem into sub-problems and provide structured analysis. "
-        "Return JSON only."
+        "Return JSON only. Every item must include objective, constraints, assumptions, "
+        "deliverables, formulation_steps, chosen_method, and confidence in addition to "
+        "the existing analysis fields."
     ),
     "modeling_user": (
         "Problem statement:\n"
@@ -24,29 +31,72 @@ _DEFAULT_PROMPTS: dict[str, str] = {
         "- needed_data: string[]\n"
         "- evaluation: string[]\n"
         "- notes: string[]\n"
+        "- objective: string\n"
+        "- constraints: string[]\n"
+        "- assumptions: string[]\n"
+        "- deliverables: string[]\n"
+        "- formulation_steps: string[]\n"
+        "- chosen_method: string\n"
+        "- confidence: number between 0 and 1\n"
         "If the problem should not be split, still return an array with one item. "
         "Do not include any commentary outside the JSON."
     ),
+    "coding_system": (
+        "You are a coding agent for mathematical modeling. "
+        "Return JSON only with fields 'summary' and 'code'. "
+        "The code must be executable Python, prefer the standard library, "
+        "read optional context from context.json, write useful artifacts to the current "
+        "working directory, and write a result.json file with this schema: "
+        "{{subproblem_title,status,method,objective,assumptions,constraints,"
+        "result_summary,evidence,numeric_results,artifacts,next_steps}}. "
+        "The status must be one of ok, partial, or failed. "
+        "If optional scientific libraries such as numpy, pandas, scipy, pulp, or networkx "
+        "are available, you may use them. Otherwise degrade gracefully."
+    ),
+    "coding_user": (
+        "Problem statement:\n"
+        "{problem_text}\n\n"
+        "Structured context JSON:\n"
+        "{context_json}\n\n"
+        "Return a JSON object with:\n"
+        "- summary: short string\n"
+        "- code: Python source code as a string\n"
+        "Requirements:\n"
+        "- The code should be self-contained and executable.\n"
+        "- It may read context.json from the current directory.\n"
+        "- It must write result.json using the required schema.\n"
+        "- It should write at least one additional artifact file summarizing the computation.\n"
+        "- The generated code should solve the current subproblem only, not the whole task at once.\n"
+        "- Do not use markdown fences inside the JSON string unless unavoidable.\n"
+    ),
     "writing_system": (
         "You are an expert writer for mathematical modeling competition papers. "
-        "Write a rigorous Markdown draft based on the problem statement and the "
-        "sub-problem analysis. Do not fabricate numerical results. If data or "
-        "experiments are missing, clearly state what needs to be verified."
+        "Write a rigorous Markdown draft based on the problem statement, the "
+        "sub-problem analysis, the solver outputs, and the review findings. "
+        "Do not fabricate numerical results. If data or experiments are missing, "
+        "clearly state what needs to be verified. Explicitly cite numeric_results "
+        "and evidence from each structured solver result whenever available."
     ),
     "writing_user": (
         "Problem statement:\n"
         "{problem_text}\n\n"
         "Sub-problem analysis (JSON):\n"
         "{subproblems_json}\n\n"
+        "Solver runs (JSON):\n"
+        "{solver_runs_json}\n\n"
+        "Review findings (JSON):\n"
+        "{review_findings_json}\n\n"
         "Write Markdown with the following sections:\n"
-        "- Abstract\n"
-        "- Problem Restatement\n"
-        "- Sub-problem Analysis and Method Selection\n"
-        "- Assumptions and Notation\n"
-        "- Model Formulation and Solution\n"
-        "- Results and Analysis\n"
-        "- Conclusion and Future Work\n"
-        "Explain the model or algorithm and the solution steps for each sub-problem."
+        "- 摘要\n"
+        "- 问题重述\n"
+        "- 子问题分析与方法选择\n"
+        "- 模型假设与符号说明\n"
+        "- 求解与实验\n"
+        "- 结果与分析\n"
+        "- 结论与后续工作\n"
+        "Explain the model or algorithm and the solution steps for each sub-problem. "
+        "For each sub-problem, cite numeric_results and evidence from the solver runs. "
+        "If a solver run failed or evidence is missing, state that clearly instead of inventing results."
     ),
 }
 
@@ -61,5 +111,7 @@ def load_prompt(name: str) -> str:
     return _DEFAULT_PROMPTS[name].strip()
 
 
-def render_prompt(name: str, **kwargs: str) -> str:
-    return load_prompt(name).format(**kwargs)
+def render_prompt(name: str, **kwargs: object) -> str:
+    return load_prompt(name).format_map(
+        _SafeFormatDict({key: str(value) for key, value in kwargs.items()})
+    )

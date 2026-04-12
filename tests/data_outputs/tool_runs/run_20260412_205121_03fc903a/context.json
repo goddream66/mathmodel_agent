@@ -1,0 +1,222 @@
+{
+  "problem_text": "Problem 1: forecast demand for the next 2 days.",
+  "clarifications": [
+    "Which variables are the decision variables, state variables, and outputs?",
+    "Which constraints must always hold?",
+    "Which claims require quantitative evidence before they can appear in the final paper?"
+  ],
+  "subproblem_index": 1,
+  "subproblem": {
+    "title": "Problem 1",
+    "text": "forecast demand for the next 2 days.",
+    "analysis": {
+      "task_types": [
+        "预测/拟合"
+      ],
+      "candidate_models": [
+        "线性/非线性回归",
+        "ARIMA/Prophet",
+        "灰色预测 GM(1,1)"
+      ],
+      "solution_plan": [
+        "先明确输入、输出、约束和评价指标，避免模型目标漂移。",
+        "整理历史数据并检查缺失、异常值和单位一致性。",
+        "先建立基线模型，再与更复杂模型做对比。",
+        "使用误差指标和回测结果评估预测稳定性。"
+      ],
+      "key_variables": [
+        "时间索引",
+        "目标变量",
+        "解释变量"
+      ],
+      "needed_data": [
+        "历史观测数据",
+        "外部影响因素或特征变量"
+      ],
+      "evaluation": [
+        "检查假设是否合理、变量定义是否一致。",
+        "使用 MAE、RMSE、MAPE 等误差指标。",
+        "进行回测或验证集评估。"
+      ],
+      "notes": [
+        "先把题目里的变量、单位、边界条件统一。",
+        "避免在没有数据支撑时直接给出数值结论。"
+      ],
+      "objective": "建立预测模型并给出可解释的误差评估。",
+      "constraints": [
+        "训练与验证数据划分方式需要保持时序一致。"
+      ],
+      "assumptions": [
+        "变量定义清晰且可以被观测、估计或求解。",
+        "原始题面没有说明的外部环境在分析周期内保持相对稳定。",
+        "历史数据对未来具有一定代表性。"
+      ],
+      "deliverables": [
+        "结构化建模思路",
+        "关键公式或算法流程",
+        "可复核的结论说明",
+        "预测结果与误差分析"
+      ],
+      "formulation_steps": [
+        "目标定义：建立预测模型并给出可解释的误差评估。",
+        "约束梳理：训练与验证数据划分方式需要保持时序一致。",
+        "构建特征和时间索引，给出训练、验证和预测流程。"
+      ],
+      "chosen_method": "线性/非线性回归",
+      "confidence": 0.75
+    }
+  },
+  "all_subproblems": [
+    {
+      "title": "Problem 1",
+      "text": "forecast demand for the next 2 days.",
+      "analysis": {
+        "task_types": [
+          "预测/拟合"
+        ],
+        "candidate_models": [
+          "线性/非线性回归",
+          "ARIMA/Prophet",
+          "灰色预测 GM(1,1)"
+        ],
+        "solution_plan": [
+          "先明确输入、输出、约束和评价指标，避免模型目标漂移。",
+          "整理历史数据并检查缺失、异常值和单位一致性。",
+          "先建立基线模型，再与更复杂模型做对比。",
+          "使用误差指标和回测结果评估预测稳定性。"
+        ],
+        "key_variables": [
+          "时间索引",
+          "目标变量",
+          "解释变量"
+        ],
+        "needed_data": [
+          "历史观测数据",
+          "外部影响因素或特征变量"
+        ],
+        "evaluation": [
+          "检查假设是否合理、变量定义是否一致。",
+          "使用 MAE、RMSE、MAPE 等误差指标。",
+          "进行回测或验证集评估。"
+        ],
+        "notes": [
+          "先把题目里的变量、单位、边界条件统一。",
+          "避免在没有数据支撑时直接给出数值结论。"
+        ],
+        "objective": "建立预测模型并给出可解释的误差评估。",
+        "constraints": [
+          "训练与验证数据划分方式需要保持时序一致。"
+        ],
+        "assumptions": [
+          "变量定义清晰且可以被观测、估计或求解。",
+          "原始题面没有说明的外部环境在分析周期内保持相对稳定。",
+          "历史数据对未来具有一定代表性。"
+        ],
+        "deliverables": [
+          "结构化建模思路",
+          "关键公式或算法流程",
+          "可复核的结论说明",
+          "预测结果与误差分析"
+        ],
+        "formulation_steps": [
+          "目标定义：建立预测模型并给出可解释的误差评估。",
+          "约束梳理：训练与验证数据划分方式需要保持时序一致。",
+          "构建特征和时间索引，给出训练、验证和预测流程。"
+        ],
+        "chosen_method": "线性/非线性回归",
+        "confidence": 0.75
+      }
+    }
+  ],
+  "input_data": {
+    "tables": [
+      {
+        "name": "forecast_alias_series",
+        "source": "tests\\fixtures\\forecast_alias_series.csv",
+        "kind": "table",
+        "columns": [
+          "qty_sold",
+          "period"
+        ],
+        "rows": [
+          {
+            "qty_sold": 10,
+            "period": 1
+          },
+          {
+            "qty_sold": 12,
+            "period": 2
+          },
+          {
+            "qty_sold": 15,
+            "period": 3
+          },
+          {
+            "qty_sold": 18,
+            "period": 4
+          },
+          {
+            "qty_sold": 21,
+            "period": 5
+          }
+        ],
+        "row_count": 5,
+        "normalized_columns": {
+          "qty_sold": "qty_sold",
+          "period": "period"
+        },
+        "numeric_columns": [
+          "qty_sold",
+          "period"
+        ],
+        "text_columns": [],
+        "column_roles": {
+          "time": "period",
+          "value": "qty_sold"
+        },
+        "task_roles": {
+          "forecast": {
+            "time": "period",
+            "value": "qty_sold"
+          },
+          "optimization": {
+            "value": "qty_sold"
+          },
+          "path": {},
+          "evaluation": {
+            "score": "qty_sold"
+          }
+        }
+      }
+    ],
+    "table_names": [
+      "forecast_alias_series"
+    ],
+    "table_count": 1
+  },
+  "model": {
+    "assumptions": [
+      "变量定义清晰且可以被观测、估计或求解。",
+      "原始题面没有说明的外部环境在分析周期内保持相对稳定。",
+      "历史数据对未来具有一定代表性。"
+    ],
+    "constraints": [
+      "训练与验证数据划分方式需要保持时序一致。"
+    ],
+    "method_candidates": [
+      "线性/非线性回归",
+      "ARIMA/Prophet",
+      "灰色预测 GM(1,1)"
+    ],
+    "chosen_method": "线性/非线性回归",
+    "formulation_outline": [
+      "目标定义：建立预测模型并给出可解释的误差评估。",
+      "约束梳理：训练与验证数据划分方式需要保持时序一致。",
+      "构建特征和时间索引，给出训练、验证和预测流程。"
+    ],
+    "evidence_gaps": [
+      "历史观测数据",
+      "外部影响因素或特征变量"
+    ]
+  }
+}

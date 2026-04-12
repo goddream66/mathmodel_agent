@@ -1,0 +1,235 @@
+{
+  "problem_text": "Problem 1: optimize profit under budget 100.",
+  "clarifications": [
+    "Which variables are the decision variables, state variables, and outputs?",
+    "Which constraints must always hold?",
+    "Which claims require quantitative evidence before they can appear in the final paper?"
+  ],
+  "subproblem_index": 1,
+  "subproblem": {
+    "title": "Problem 1",
+    "text": "optimize profit under budget 100.",
+    "analysis": {
+      "task_types": [
+        "优化/决策"
+      ],
+      "candidate_models": [
+        "线性规划",
+        "整数规划/混合整数规划",
+        "多目标优化"
+      ],
+      "solution_plan": [
+        "先明确输入、输出、约束和评价指标，避免模型目标漂移。",
+        "把文字规则转成决策变量、目标函数和约束条件。",
+        "区分连续变量、整数变量和 0-1 变量。",
+        "求解后做可行性检查和敏感性分析。"
+      ],
+      "key_variables": [
+        "决策变量",
+        "目标函数值",
+        "约束边界"
+      ],
+      "needed_data": [
+        "成本、收益或资源参数",
+        "业务约束与上限"
+      ],
+      "evaluation": [
+        "检查假设是否合理、变量定义是否一致。",
+        "检查解的可行性和边界情况。",
+        "做敏感性分析。"
+      ],
+      "notes": [
+        "先把题目里的变量、单位、边界条件统一。",
+        "避免在没有数据支撑时直接给出数值结论。"
+      ],
+      "objective": "构建目标函数并求得最优决策方案。",
+      "constraints": [
+        "需要明确资源上限、容量约束和业务规则。"
+      ],
+      "assumptions": [
+        "变量定义清晰且可以被观测、估计或求解。",
+        "原始题面没有说明的外部环境在分析周期内保持相对稳定。",
+        "成本、收益或资源参数在求解区间内可视为已知。"
+      ],
+      "deliverables": [
+        "结构化建模思路",
+        "关键公式或算法流程",
+        "可复核的结论说明",
+        "最优方案与敏感性分析"
+      ],
+      "formulation_steps": [
+        "目标定义：构建目标函数并求得最优决策方案。",
+        "约束梳理：需要明确资源上限、容量约束和业务规则。",
+        "把目标与约束写成线性规划、整数规划或多目标优化模型。"
+      ],
+      "chosen_method": "线性规划",
+      "confidence": 0.75
+    }
+  },
+  "all_subproblems": [
+    {
+      "title": "Problem 1",
+      "text": "optimize profit under budget 100.",
+      "analysis": {
+        "task_types": [
+          "优化/决策"
+        ],
+        "candidate_models": [
+          "线性规划",
+          "整数规划/混合整数规划",
+          "多目标优化"
+        ],
+        "solution_plan": [
+          "先明确输入、输出、约束和评价指标，避免模型目标漂移。",
+          "把文字规则转成决策变量、目标函数和约束条件。",
+          "区分连续变量、整数变量和 0-1 变量。",
+          "求解后做可行性检查和敏感性分析。"
+        ],
+        "key_variables": [
+          "决策变量",
+          "目标函数值",
+          "约束边界"
+        ],
+        "needed_data": [
+          "成本、收益或资源参数",
+          "业务约束与上限"
+        ],
+        "evaluation": [
+          "检查假设是否合理、变量定义是否一致。",
+          "检查解的可行性和边界情况。",
+          "做敏感性分析。"
+        ],
+        "notes": [
+          "先把题目里的变量、单位、边界条件统一。",
+          "避免在没有数据支撑时直接给出数值结论。"
+        ],
+        "objective": "构建目标函数并求得最优决策方案。",
+        "constraints": [
+          "需要明确资源上限、容量约束和业务规则。"
+        ],
+        "assumptions": [
+          "变量定义清晰且可以被观测、估计或求解。",
+          "原始题面没有说明的外部环境在分析周期内保持相对稳定。",
+          "成本、收益或资源参数在求解区间内可视为已知。"
+        ],
+        "deliverables": [
+          "结构化建模思路",
+          "关键公式或算法流程",
+          "可复核的结论说明",
+          "最优方案与敏感性分析"
+        ],
+        "formulation_steps": [
+          "目标定义：构建目标函数并求得最优决策方案。",
+          "约束梳理：需要明确资源上限、容量约束和业务规则。",
+          "把目标与约束写成线性规划、整数规划或多目标优化模型。"
+        ],
+        "chosen_method": "线性规划",
+        "confidence": 0.75
+      }
+    }
+  ],
+  "input_data": {
+    "tables": [
+      {
+        "name": "optimization_items",
+        "source": "tests\\fixtures\\optimization_items.csv",
+        "kind": "table",
+        "columns": [
+          "item",
+          "cost",
+          "value"
+        ],
+        "rows": [
+          {
+            "item": "A",
+            "cost": 25,
+            "value": 40
+          },
+          {
+            "item": "B",
+            "cost": 40,
+            "value": 70
+          },
+          {
+            "item": "C",
+            "cost": 70,
+            "value": 95
+          },
+          {
+            "item": "D",
+            "cost": 15,
+            "value": 18
+          }
+        ],
+        "row_count": 4,
+        "normalized_columns": {
+          "item": "item",
+          "cost": "cost",
+          "value": "value"
+        },
+        "numeric_columns": [
+          "cost",
+          "value"
+        ],
+        "text_columns": [
+          "item"
+        ],
+        "column_roles": {
+          "time": "cost",
+          "value": "value",
+          "cost": "cost",
+          "profit": "value",
+          "target": "value",
+          "weight": "cost"
+        },
+        "task_roles": {
+          "forecast": {
+            "time": "cost",
+            "value": "value"
+          },
+          "optimization": {
+            "cost": "cost",
+            "value": "value"
+          },
+          "path": {
+            "target": "value",
+            "weight": "cost"
+          },
+          "evaluation": {
+            "weight": "cost",
+            "score": "value"
+          }
+        }
+      }
+    ],
+    "table_names": [
+      "optimization_items"
+    ],
+    "table_count": 1
+  },
+  "model": {
+    "assumptions": [
+      "变量定义清晰且可以被观测、估计或求解。",
+      "原始题面没有说明的外部环境在分析周期内保持相对稳定。",
+      "成本、收益或资源参数在求解区间内可视为已知。"
+    ],
+    "constraints": [
+      "需要明确资源上限、容量约束和业务规则。"
+    ],
+    "method_candidates": [
+      "线性规划",
+      "整数规划/混合整数规划",
+      "多目标优化"
+    ],
+    "chosen_method": "线性规划",
+    "formulation_outline": [
+      "目标定义：构建目标函数并求得最优决策方案。",
+      "约束梳理：需要明确资源上限、容量约束和业务规则。",
+      "把目标与约束写成线性规划、整数规划或多目标优化模型。"
+    ],
+    "evidence_gaps": [
+      "成本、收益或资源参数",
+      "业务约束与上限"
+    ]
+  }
+}

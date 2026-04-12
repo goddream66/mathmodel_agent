@@ -8,7 +8,7 @@ from ..memory import MemoryStore
 from ..state import TaskState
 from ..tools import ToolRegistry
 from .base import Agent
-from .specialists import CodingAgent, ModelingAgent, ReviewAgent, WritingAgent
+from .specialists_v3 import CodingAgent, ModelingAgent, ReviewAgent, WritingAgent
 
 
 @dataclass
@@ -55,7 +55,30 @@ class ManagerAgent:
             {
                 "stage": state.stage,
                 "clarifications": state.clarifications,
+                "input_data": state.input_data,
                 "results": state.results,
+                "model": {
+                    "objective": state.model.objective,
+                    "constraints": state.model.constraints,
+                    "assumptions": state.model.assumptions,
+                    "method_candidates": state.model.method_candidates,
+                    "chosen_method": state.model.chosen_method,
+                    "formulation_outline": state.model.formulation_outline,
+                    "evidence_gaps": state.model.evidence_gaps,
+                },
+                "solver_runs": [
+                    {
+                        "subproblem_title": run.subproblem_title,
+                        "success": run.success,
+                        "summary": run.summary,
+                        "stdout": run.stdout,
+                        "stderr": run.stderr,
+                        "artifacts": run.artifacts,
+                        "structured_result": run.structured_result,
+                        "schema_valid": run.schema_valid,
+                    }
+                    for run in state.solver_runs
+                ],
                 "subproblems": [
                     {
                         "title": sp.title,
@@ -68,6 +91,13 @@ class ManagerAgent:
                             "needed_data": sp.analysis.needed_data,
                             "evaluation": sp.analysis.evaluation,
                             "notes": sp.analysis.notes,
+                            "objective": sp.analysis.objective,
+                            "constraints": sp.analysis.constraints,
+                            "assumptions": sp.analysis.assumptions,
+                            "deliverables": sp.analysis.deliverables,
+                            "formulation_steps": sp.analysis.formulation_steps,
+                            "chosen_method": sp.analysis.chosen_method,
+                            "confidence": sp.analysis.confidence,
                         },
                     }
                     for sp in state.subproblems
@@ -90,8 +120,15 @@ class ManagerAgent:
             return self.review.name
         return None
 
-    def run(self, problem_text: str, tools: ToolRegistry, memory: MemoryStore) -> TaskState:
-        state = TaskState(problem_text=problem_text, stage="intake")
+    def run(
+        self,
+        problem_text: str,
+        tools: ToolRegistry,
+        memory: MemoryStore,
+        *,
+        input_data: dict | None = None,
+    ) -> TaskState:
+        state = TaskState(problem_text=problem_text, stage="intake", input_data=input_data or {})
         memory.set_shared("run_status", "started")
         memory.append_event("shared", self.name, "start", {"stage": state.stage})
         self._record_config(memory)

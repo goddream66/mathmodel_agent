@@ -1,0 +1,27 @@
+{
+  "MODELING": {
+    "provider": "openai_compat",
+    "base_url": "https://api.openai.com",
+    "api_key": "your-modeling-key",
+    "model": "gpt-4o-mini"
+  },
+  "WRITING": {
+    "provider": "custom_http",
+    "base_url": "https://your-relay.example.com",
+    "api_key": "your-writing-key",
+    "model": "relay-model-name",
+    "options": {
+      "path": "/v1/chat/completions",
+      "headers": {
+        "Authorization": "Bearer {api_key}",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "model": "{model}",
+        "messages": "$messages",
+        "temperature": "$temperature"
+      },
+      "response_path": "choices.0.message.content"
+    }
+  }
+}
