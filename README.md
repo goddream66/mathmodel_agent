@@ -1,12 +1,19 @@
-# 数学建模智能体（MathAgent）框架骨架
+# Mathmodel_agent（数学建模智能体）
 
-这个仓库的目标：把“数学建模竞赛/作业”的完整流程做成一个可复用的智能体框架，让它能从题目出发，产出：
-- 结构化建模思路（假设、符号、目标函数、约束）
-- 可复现实验（数据处理、求解、敏感性分析）
-- 可交付报告（摘要、模型、算法、结果、讨论、附录代码）
+Mathmodel_agent 是一款面向数学建模竞赛（尤其是国赛 3 天紧凑赛程）的智能体框架：你只需提供题目 PDF，它就能以“流程化工作流”的方式帮助你快速产出思路与论文草稿。
 
-你可以把它理解成一条“流水线”：
-题目 →（理解与澄清）→（建模）→（求解与实验）→（验证）→（写作）
+核心理念：用一个总控智能体把建模、编程实验、论文写作拆成三个专家智能体协同完成，实现 1+1+1+1>>4。
+
+## 主要能力（当前版本 + 可扩展）
+
+- **总控 + 三专家 agent**：建模手、编程手、论文手按阶段协作（见 [agents](file:///d:/trae_project/trae_mathagent/src/mathagent/agents)）
+- **共享但隔离的统一数据库（SQLite）**：共享区保存关键中间结果，同时各 agent 有独立命名空间（见 [sqlite_store.py](file:///d:/trae_project/trae_mathagent/src/mathagent/memory/sqlite_store.py)）
+- **PDF 题面读取 + 可选 OCR**：文字版 PDF 直接提取文字；图片/表格截图可用 OCR 追加识别文本（见 [loaders.py](file:///d:/trae_project/trae_mathagent/src/mathagent/io/loaders.py)）
+- **结构化分题分析范式**：自动拆分子问题，逐题输出任务类型、候选模型/算法、求解流程、数据需求与评价方式（见 [problem_analysis.py](file:///d:/trae_project/trae_mathagent/src/mathagent/skills/problem_analysis.py)）
+- **每个 agent 独立 LLM 配置**：同一项目里不同 agent 可使用不同厂商/中转站 API（统一走 OpenAI 兼容接口）
+
+说明：
+- 图表绘制与论文“国奖风格”写作目前以模板与 LLM 可选增强为主；后续可以在编程手/论文手中接入数据、自动绘图与更严格的论文规范模板。
 
 ## 你需要哪些“东西”（小白版）
 

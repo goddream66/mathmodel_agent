@@ -53,5 +53,17 @@ class ProblemAnalysisTest(unittest.TestCase):
         self.assertTrue(any("规划" in m or "整数" in m for m in sp2.analysis.candidate_models))
 
 
+    def test_orchestrator_uses_manager_flow(self) -> None:
+        text = "问题一：请预测未来7天销量。"
+        state = Orchestrator(
+            tools=ToolRegistry.empty(),
+            db_path="data/test_smoke.db",
+        ).run(text)
+        self.assertEqual(state.stage, "done")
+        self.assertTrue(state.results.get("reviewed_solution"))
+        self.assertTrue(state.results.get("final_review_done"))
+        self.assertTrue(state.report_md)
+
+
 if __name__ == "__main__":
     unittest.main()

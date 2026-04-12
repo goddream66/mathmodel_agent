@@ -41,9 +41,14 @@ class MemoryStore:
             )
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
-        conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute("PRAGMA synchronous=NORMAL;")
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        try:
+            conn.execute("PRAGMA journal_mode=DELETE;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+        except sqlite3.OperationalError:
+            # Some filesystems reject journal tuning on first-create; the
+            # default SQLite settings are still good enough for this scaffold.
+            pass
         return conn
 
     def set_shared(self, key: str, value: str) -> None:
@@ -97,4 +102,3 @@ class MemoryStore:
                 (scope, agent, key),
             ).fetchone()
         return row[0] if row else None
-

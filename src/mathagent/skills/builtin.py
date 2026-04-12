@@ -68,7 +68,7 @@ class ValidateSkill:
             "目标函数与约束是否自洽",
             "结果是否可复现（随机种子/版本）",
         ]
-        state.stage = "report"
+        state.stage = "review"
         return state
 
 
@@ -150,4 +150,5 @@ class ReportSkill:
         )
 
         state.report_md = "\n".join(report_lines)
+        state.stage = "review"
         return state

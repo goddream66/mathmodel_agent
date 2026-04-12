@@ -10,7 +10,9 @@ Stage = Literal[
     "model",
     "solve",
     "validate",
+    "review",
     "report",
+    "done",
 ]
 
 

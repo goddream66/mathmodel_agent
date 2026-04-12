@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 from ..llm import Message, build_llm
 from ..llm.config import load_llm_config
 from ..llm.utils import extract_first_json
 from ..memory import MemoryStore
+from ..prompts import load_prompt, render_prompt
 from ..skills import (
     ClarifySkill,
     ModelSkill,
@@ -33,6 +35,7 @@ class ModelingAgent:
         if cfg is not None:
             llm = build_llm(cfg)
             try:
+                """
                 payload = extract_first_json(
                     llm.chat(
                         [
@@ -64,6 +67,22 @@ class ModelingAgent:
                         temperature=0.2,
                     )
                 )
+                """
+                payload = extract_first_json(
+                    llm.chat(
+                        [
+                            Message(role="system", content=load_prompt("modeling_system")),
+                            Message(
+                                role="user",
+                                content=render_prompt(
+                                    "modeling_user",
+                                    problem_text=state.problem_text,
+                                ),
+                            ),
+                        ],
+                        temperature=0.2,
+                    )
+                )
                 if isinstance(payload, list) and payload:
                     state.subproblems = []
                     for item in payload:
@@ -81,8 +100,9 @@ class ModelingAgent:
                         analysis.evaluation = list(item.get("evaluation") or [])
                         analysis.notes = list(item.get("notes") or [])
                         state.subproblems.append(sp)
-            except Exception:
-                pass
+            except Exception as e:
+                memory.set_agent_json(self.name, "llm_error", {"error": str(e)})
+                memory.append_event("agent", self.name, "llm_error", {"error": str(e)})
 
         memory.set_shared("problem_text", state.problem_text)
         memory.set_shared_json(
@@ -115,8 +135,52 @@ class CodingAgent:
 
     def run(self, state: TaskState, tools: ToolRegistry, memory: MemoryStore) -> TaskState:
         state = SolveSkill().run(state, tools)
+        memory.set_agent_json(
+            self.name,
+            "solver_result",
+            {
+                "status": state.results.get("status"),
+                "artifacts": [artifact.name for artifact in state.artifacts],
+            },
+        )
+        memory.append_event("agent", self.name, "done", {"stage": state.stage})
+        return state
+
+
+@dataclass(frozen=True)
+class ReviewAgent:
+    name: str = "review"
+
+    def run(self, state: TaskState, tools: ToolRegistry, memory: MemoryStore) -> TaskState:
         state = ValidateSkill().run(state, tools)
-        memory.set_agent_json(self.name, "checks", state.results.get("checks", []))
+
+        review_notes = list(state.results.get("review_notes", []))
+        if state.report_md is None:
+            review_notes.append("solution review completed; report generation is next.")
+            state.results["reviewed_solution"] = True
+            state.stage = "report"
+        else:
+            report_checks = [
+                "report draft generated",
+                "verify symbols, assumptions, and conclusions before submission",
+            ]
+            if "## " not in state.report_md:
+                report_checks.append("report is missing detailed subsection headers")
+            state.results["report_checks"] = report_checks
+            review_notes.append("final report review completed.")
+            state.results["final_review_done"] = True
+            state.stage = "done"
+
+        state.results["review_notes"] = review_notes
+        memory.set_agent_json(
+            self.name,
+            "review",
+            {
+                "checks": state.results.get("checks", []),
+                "notes": review_notes,
+                "report_checks": state.results.get("report_checks", []),
+            },
+        )
         memory.append_event("agent", self.name, "done", {"stage": state.stage})
         return state
 
@@ -145,6 +209,7 @@ class WritingAgent:
                     }
                     for sp in state.subproblems
                 ]
+                """
                 report = llm.chat(
                     [
                         Message(
@@ -168,12 +233,30 @@ class WritingAgent:
                     ],
                     temperature=0.2,
                 )
+                """
+                report = llm.chat(
+                    [
+                        Message(role="system", content=load_prompt("writing_system")),
+                        Message(
+                            role="user",
+                            content=render_prompt(
+                                "writing_user",
+                                problem_text=state.problem_text,
+                                subproblems_json=json.dumps(sub, ensure_ascii=False, indent=2),
+                            ),
+                        ),
+                    ],
+                    temperature=0.2,
+                )
                 state.report_md = report.strip()
-            except Exception:
+            except Exception as e:
+                memory.set_agent_json(self.name, "llm_error", {"error": str(e)})
+                memory.append_event("agent", self.name, "llm_error", {"error": str(e)})
                 state = ReportSkill().run(state, tools)
         else:
             state = ReportSkill().run(state, tools)
         if state.report_md is not None:
             memory.set_shared("report_md", state.report_md)
+            state.stage = "review"
         memory.append_event("agent", self.name, "done", {"stage": state.stage})
         return state

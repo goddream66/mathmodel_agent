@@ -12,6 +12,9 @@ class SmokeTest(unittest.TestCase):
             "一个简单的示例题目", tools=ToolRegistry.empty(), memory=MemoryStore("data/test_smoke.db")
         )
         self.assertTrue(state.report_md)
+        self.assertEqual(state.stage, "done")
+        self.assertTrue(state.results.get("reviewed_solution"))
+        self.assertTrue(state.results.get("final_review_done"))
 
 
 if __name__ == "__main__":
