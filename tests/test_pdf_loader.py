@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from mathagent.io import load_problem_text
 
@@ -37,6 +38,27 @@ class PdfLoaderTest(unittest.TestCase):
             self.assertIn(".[ocr]", str(ctx.exception))
         else:
             self.skipTest("ocr deps installed; skip missing-dependency test")
+
+    def test_pdf_loader_tries_ocr_by_default_and_falls_back(self) -> None:
+        with patch("mathagent.io.loaders_v2._extract_text_from_pdf", return_value="base text") as base_mock:
+            with patch(
+                "mathagent.io.loaders_v2._extract_ocr_text_from_pdf",
+                side_effect=RuntimeError("missing ocr deps"),
+            ) as ocr_mock:
+                result = load_problem_text("problem.pdf")
+
+        self.assertEqual(result, "base text")
+        base_mock.assert_called_once()
+        ocr_mock.assert_called_once()
+
+    def test_pdf_loader_can_disable_auto_ocr(self) -> None:
+        with patch("mathagent.io.loaders_v2._extract_text_from_pdf", return_value="base text") as base_mock:
+            with patch("mathagent.io.loaders_v2._extract_ocr_text_from_pdf") as ocr_mock:
+                result = load_problem_text("problem.pdf", enable_ocr=False)
+
+        self.assertEqual(result, "base text")
+        base_mock.assert_called_once()
+        ocr_mock.assert_not_called()
 
 
 if __name__ == "__main__":

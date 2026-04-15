@@ -16,7 +16,19 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="mathagent")
     parser.add_argument("--problem-file", type=str, default=None)
     parser.add_argument("--db-path", type=str, default="data/mathagent.db")
-    parser.add_argument("--ocr", action="store_true", help="Enable OCR for images inside PDF files.")
+    parser.add_argument(
+        "--ocr",
+        dest="ocr",
+        action="store_true",
+        help="Force OCR for images inside PDF files.",
+    )
+    parser.add_argument(
+        "--no-ocr",
+        dest="ocr",
+        action="store_false",
+        help="Disable automatic OCR for PDF files.",
+    )
+    parser.set_defaults(ocr=None)
     parser.add_argument(
         "--ocr-mode",
         type=str,

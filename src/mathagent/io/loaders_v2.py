@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+import importlib
 import json
 from pathlib import Path
 from typing import Any
@@ -10,7 +11,7 @@ from .tabular import summarize_table
 
 
 def load_problem_text(
-    path: str | Path, *, enable_ocr: bool = False, ocr_mode: str = "auto"
+    path: str | Path, *, enable_ocr: bool | None = None, ocr_mode: str = "auto"
 ) -> str:
     p = Path(path)
     suffix = p.suffix.lower()
@@ -19,10 +20,16 @@ def load_problem_text(
 
     if suffix == ".pdf":
         base_text = _extract_text_from_pdf(p)
-        if not enable_ocr:
+        should_try_ocr = True if enable_ocr is None else enable_ocr
+        if not should_try_ocr:
             return base_text
 
-        ocr_text = _extract_ocr_text_from_pdf(p, base_text=base_text, mode=ocr_mode)
+        try:
+            ocr_text = _extract_ocr_text_from_pdf(p, base_text=base_text, mode=ocr_mode)
+        except RuntimeError:
+            if enable_ocr is True:
+                raise
+            return base_text
         if not ocr_text:
             return base_text
 
@@ -112,7 +119,7 @@ def _load_json_tables(path: Path) -> list[dict[str, Any]]:
 
 def _load_excel_tables(path: Path) -> list[dict[str, Any]]:
     try:
-        from openpyxl import load_workbook
+        load_workbook = _import_optional_module("openpyxl").load_workbook
     except ImportError as e:
         raise RuntimeError(
             "Reading XLSX files requires openpyxl. Run: python -m pip install -e .[solver]"
@@ -223,9 +230,13 @@ def _coerce_cell(value: Any) -> Any:
     return value
 
 
+def _import_optional_module(module_name: str) -> Any:
+    return importlib.import_module(module_name)
+
+
 def _extract_text_from_pdf(path: Path) -> str:
     try:
-        from pypdf import PdfReader
+        PdfReader = _import_optional_module("pypdf").PdfReader
     except ImportError as e:
         raise RuntimeError(
             "Reading PDF files requires pypdf. Run: python -m pip install -e .[pdf]"
@@ -247,9 +258,9 @@ def _extract_ocr_text_from_pdf(path: Path, *, base_text: str, mode: str) -> str:
         ) from e
 
     try:
-        import numpy as np
-        from PIL import Image
-        from rapidocr_onnxruntime import RapidOCR
+        np = _import_optional_module("numpy")
+        Image = _import_optional_module("PIL.Image")
+        RapidOCR = _import_optional_module("rapidocr_onnxruntime").RapidOCR
     except ImportError as e:
         raise RuntimeError(
             "OCR requires pymupdf, pillow, numpy, and rapidocr-onnxruntime. Run: python -m pip install -e .[ocr]"

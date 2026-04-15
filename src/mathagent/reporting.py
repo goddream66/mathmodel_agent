@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from .state import TaskState
@@ -111,11 +112,57 @@ def select_report_sections(markdown: str, section_keys: list[str] | None) -> str
         return markdown
 
     selected_blocks: list[str] = []
-    wanted_titles = {_SECTION_BY_KEY[key].title for key in section_keys if key in _SECTION_BY_KEY}
+    wanted_keys = {key for key in section_keys if key in _SECTION_BY_KEY}
     for title, block in sections:
-        if title in wanted_titles:
+        resolved_key = _section_key_from_title(title)
+        if resolved_key in wanted_keys:
             selected_blocks.append(block.rstrip())
     return "\n\n".join(selected_blocks).strip() or markdown
+
+
+def inject_figure_titles(markdown: str, state: TaskState) -> str:
+    entries: list[tuple[str, list[str]]] = []
+    for run in state.solver_runs:
+        titles = [
+            str(item).strip()
+            for item in run.structured_result.get("figure_titles", [])
+            if str(item).strip()
+        ]
+        if titles:
+            entries.append((run.subproblem_title, titles))
+
+    if not entries:
+        return markdown
+
+    block_lines = ["## 图表标题"]
+    for subproblem_title, titles in entries:
+        block_lines.append(f"### {subproblem_title}")
+        for index, title in enumerate(titles, start=1):
+            block_lines.append(f"- 图{index}：{title}")
+        block_lines.append("")
+    block = "\n".join(block_lines).strip()
+
+    sections = _split_markdown_sections(markdown)
+    if not sections:
+        return (markdown.rstrip() + "\n\n" + block).strip()
+
+    updated_blocks: list[str] = []
+    inserted = False
+    for _, section_block in sections:
+        lines = section_block.splitlines()
+        heading = lines[0][2:].strip() if lines and lines[0].startswith("# ") else ""
+        if not inserted and _section_key_from_title(heading) == "results":
+            if "## 图表标题" in section_block:
+                updated_blocks.append(section_block.rstrip())
+            else:
+                updated_blocks.append(section_block.rstrip() + "\n\n" + block)
+            inserted = True
+        else:
+            updated_blocks.append(section_block.rstrip())
+
+    if not inserted:
+        updated_blocks.append(_SECTION_BY_KEY["results"].heading + "\n\n" + block)
+    return "\n\n".join(part for part in updated_blocks if part).strip()
 
 
 def render_fallback_report(state: TaskState) -> str:
@@ -209,6 +256,9 @@ def render_fallback_report(state: TaskState) -> str:
                 evidence = [str(item) for item in structured.get("evidence", [])]
                 if evidence:
                     lines.extend(["### Evidence", *_render_bullets(evidence), ""])
+                figure_titles = [str(item) for item in structured.get("figure_titles", []) if str(item).strip()]
+                if figure_titles:
+                    lines.extend(["### Figure Titles", *_render_bullets(figure_titles), ""])
             lines.extend(
                 [
                     "### Stdout",
@@ -258,6 +308,9 @@ def render_fallback_report(state: TaskState) -> str:
             evidence = [str(x) for x in item.get("evidence", [])]
             if evidence:
                 lines.extend(_render_bullets(evidence))
+            figure_titles = [str(x) for x in item.get("figure_titles", []) if str(x).strip()]
+            if figure_titles:
+                lines.extend(["#### Figure Titles", *_render_bullets(figure_titles)])
             lines.append("")
 
     findings = state.results.get("review_findings", [])
@@ -289,6 +342,31 @@ def _render_bullets(items: list[str], *, empty_text: str = "No details yet") -> 
 
 def _split_section_tokens(raw: str) -> list[str]:
     return [token.strip() for token in raw.replace(",", " ").split() if token.strip()]
+
+
+def _normalize_section_title(title: str) -> str:
+    normalized = title.strip()
+    normalized = re.sub(
+        r"^(?:第\s*[0-9一二三四五六七八九十百零]+\s*[章节部分篇]\s*|[0-9一二三四五六七八九十]+(?:\.[0-9]+)*\s*[、.．)]\s*)",
+        "",
+        normalized,
+    )
+    return normalized.strip()
+
+
+def _section_key_from_title(title: str) -> str | None:
+    normalized = _normalize_section_title(title).lower()
+    candidates = (
+        normalized,
+        normalized.replace(" ", "_"),
+        normalized.replace(" ", ""),
+        normalized.replace("-", "_"),
+    )
+    for candidate in candidates:
+        key = _SECTION_ALIASES.get(candidate)
+        if key is not None:
+            return key
+    return None
 
 
 def _split_markdown_sections(markdown: str) -> list[tuple[str, str]]:

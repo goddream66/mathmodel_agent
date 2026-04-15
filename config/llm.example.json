@@ -1,14 +1,25 @@
 {
-  "MODELING": {
+  "DEFAULT": {
     "provider": "openai_compat",
     "base_url": "https://api.openai.com",
-    "api_key": "your-modeling-key",
+    "api_key": "replace-with-your-api-key",
     "model": "gpt-4o-mini"
   },
+  "MANAGER": {},
+  "MODELING": {
+    "model": "gpt-4.1-mini"
+  },
+  "CODING": {
+    "model": "gpt-4.1-mini"
+  },
+  "REVIEW": {},
   "WRITING": {
+    "model": "gpt-4o-mini"
+  },
+  "CUSTOM_HTTP_EXAMPLE": {
     "provider": "custom_http",
     "base_url": "https://your-relay.example.com",
-    "api_key": "your-writing-key",
+    "api_key": "replace-with-your-api-key",
     "model": "relay-model-name",
     "options": {
       "path": "/v1/chat/completions",
@@ -21,7 +32,8 @@
         "messages": "$messages",
         "temperature": "$temperature"
       },
-      "response_path": "choices.0.message.content"
+      "response_path": "choices.0.message.content",
+      "timeout_s": 120
     }
   }
 }

@@ -8,6 +8,15 @@ from typing import Any
 from .types import Message
 
 
+def _build_chat_url(base_url: str) -> str:
+    normalized = base_url.rstrip("/")
+    if normalized.endswith("/chat/completions"):
+        return normalized
+    if normalized.endswith("/v1"):
+        return normalized + "/chat/completions"
+    return normalized + "/v1/chat/completions"
+
+
 @dataclass(frozen=True)
 class OpenAICompatClient:
     base_url: str
@@ -16,7 +25,7 @@ class OpenAICompatClient:
     timeout_s: float = 120.0
 
     def chat(self, messages: list[Message], *, temperature: float = 0.2) -> str:
-        url = self.base_url.rstrip("/") + "/v1/chat/completions"
+        url = _build_chat_url(self.base_url)
         payload = {
             "model": self.model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
@@ -48,4 +57,3 @@ class OpenAICompatClient:
             return data["choices"][0]["message"]["content"]
         except Exception as e:
             raise RuntimeError(f"LLM 返回结构不符合预期：{data}") from e
-

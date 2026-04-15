@@ -1,0 +1,17 @@
+{
+  "DEFAULT": {
+    "provider": "openai_compat",
+    "base_url": "https://relay.example.com",
+    "api_key": "shared-key",
+    "model": "gpt-4o-mini",
+    "options": {
+      "timeout_s": 90
+    }
+  },
+  "CODING": {
+    "model": "gpt-4.1-mini",
+    "options": {
+      "path": "/v1/chat/completions"
+    }
+  }
+}

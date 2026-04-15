@@ -1,5 +1,7 @@
+import rehypeKatex from "rehype-katex";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 
 type ReportViewerProps = {
   report: string;
@@ -19,7 +21,9 @@ export function ReportViewer(props: ReportViewerProps) {
 
       {report.trim() ? (
         <div className="markdown-shell">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+            {report}
+          </ReactMarkdown>
         </div>
       ) : (
         <div className="empty-state report-empty">

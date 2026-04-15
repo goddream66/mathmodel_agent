@@ -48,10 +48,11 @@ _DEFAULT_PROMPTS: dict[str, str] = {
         "read optional context from context.json, write useful artifacts to the current "
         "working directory, and write a result.json file with this schema: "
         "{{subproblem_title,status,method,objective,assumptions,constraints,"
-        "result_summary,evidence,numeric_results,artifacts,next_steps}}. "
+        "result_summary,evidence,numeric_results,figure_titles,artifacts,next_steps}}. "
         "The status must be one of ok, partial, or failed. "
         "If optional scientific libraries such as numpy, pandas, scipy, pulp, or networkx "
-        "are available, you may use them. Otherwise degrade gracefully."
+        "are available, you may use them. Otherwise degrade gracefully. "
+        "When meaningful, include code that writes one or more chart/image artifacts and record their titles in figure_titles."
     ),
     "coding_user": (
         "Problem statement:\n"
@@ -66,6 +67,7 @@ _DEFAULT_PROMPTS: dict[str, str] = {
         "- It may read context.json from the current directory.\n"
         "- It must write result.json using the required schema.\n"
         "- It should write at least one additional artifact file summarizing the computation.\n"
+        "- When the subproblem has numeric outputs, include backend code that generates at least one chart/image artifact and add the chart titles to figure_titles.\n"
         "- The generated code should solve the current subproblem only, not the whole task at once.\n"
         "- Do not use markdown fences inside the JSON string unless unavoidable.\n"
     ),
@@ -75,7 +77,8 @@ _DEFAULT_PROMPTS: dict[str, str] = {
         "sub-problem analysis, the solver outputs, and the review findings. "
         "Do not fabricate numerical results. If data or experiments are missing, "
         "clearly state what needs to be verified. Explicitly cite numeric_results "
-        "and evidence from each structured solver result whenever available."
+        "and evidence from each structured solver result whenever available. "
+        "If figure_titles are present, write the chart titles explicitly in the report body."
     ),
     "writing_user": (
         "Problem statement:\n"
@@ -96,6 +99,7 @@ _DEFAULT_PROMPTS: dict[str, str] = {
         "- 结论与后续工作\n"
         "Explain the model or algorithm and the solution steps for each sub-problem. "
         "For each sub-problem, cite numeric_results and evidence from the solver runs. "
+        "If figure_titles are present in a solver result, explicitly list those chart titles in the body text of the relevant section. "
         "If a solver run failed or evidence is missing, state that clearly instead of inventing results."
     ),
 }

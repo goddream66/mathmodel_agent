@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import re
 from dataclasses import dataclass
@@ -11,7 +12,7 @@ from ..llm.config import load_llm_config
 from ..llm.utils import extract_first_json
 from ..memory import MemoryStore
 from ..prompts import render_prompt
-from ..reporting import required_report_titles
+from ..reporting import inject_figure_titles, required_report_titles
 from ..skills import (
     ClarifySkill,
     ModelSkill,
@@ -42,6 +43,10 @@ def _string_list(value: Any) -> list[str]:
         if clean:
             items.append(clean)
     return items
+
+
+def _figure_titles(value: Any) -> list[str]:
+    return _string_list(value)
 
 
 def _subproblem_payload(subproblem: SubProblem) -> dict[str, Any]:
@@ -102,6 +107,9 @@ def _load_solver_artifacts(run_dir: str, artifact_names: list[str]) -> list[Expe
             except Exception:
                 payload = artifact_path.read_text(encoding="utf-8", errors="replace")
                 kind = "text"
+        elif suffix in {".png", ".jpg", ".jpeg", ".svg"}:
+            payload = {"path": str(artifact_path), "name": artifact_name}
+            kind = "figure"
         elif suffix == ".py":
             payload = artifact_path.read_text(encoding="utf-8", errors="replace")
             kind = "code"
@@ -153,6 +161,34 @@ def _normalize_numeric_results(value: Any) -> dict[str, float | int | str]:
     return normalized
 
 
+def _synthesize_evidence(normalized: dict[str, Any]) -> list[str]:
+    evidence = _string_list(normalized.get("evidence"))
+    if evidence:
+        return evidence
+
+    synthesized = ["auto_evidence=synthesized_from_available_outputs"]
+    numeric_results = normalized.get("numeric_results") or {}
+    if isinstance(numeric_results, dict) and numeric_results:
+        numeric_keys = list(numeric_results.keys())[:4]
+        synthesized.append(f"numeric_result_keys={','.join(numeric_keys)}")
+    figure_titles = _figure_titles(normalized.get("figure_titles"))
+    if figure_titles:
+        synthesized.append(f"figure_title={figure_titles[0]}")
+    artifacts = _string_list(normalized.get("artifacts"))
+    if artifacts:
+        synthesized.append(f"artifact_names={','.join(artifacts[:3])}")
+    status = str(normalized.get("status") or "").strip().lower()
+    if status:
+        synthesized.append(f"result_status={status}")
+    method = str(normalized.get("method") or "").strip()
+    if method:
+        synthesized.append(f"method_marker={method}")
+    summary = str(normalized.get("result_summary") or "").strip()
+    if summary and len(synthesized) == 1:
+        synthesized.append(f"summary_marker={summary[:120]}")
+    return [item for item in synthesized if item]
+
+
 def _validate_result_schema(payload: Any, expected_title: str) -> tuple[bool, dict[str, Any], str]:
     if not isinstance(payload, dict):
         return False, {}, "structured result is not a JSON object"
@@ -167,9 +203,11 @@ def _validate_result_schema(payload: Any, expected_title: str) -> tuple[bool, di
         "result_summary": str(payload.get("result_summary") or "").strip(),
         "evidence": _string_list(payload.get("evidence")),
         "numeric_results": _normalize_numeric_results(payload.get("numeric_results")),
+        "figure_titles": _figure_titles(payload.get("figure_titles")),
         "artifacts": _string_list(payload.get("artifacts")),
         "next_steps": _string_list(payload.get("next_steps")),
     }
+    normalized["evidence"] = _synthesize_evidence(normalized)
 
     if not normalized["subproblem_title"]:
         return False, normalized, "missing subproblem_title"
@@ -186,6 +224,14 @@ def _validate_result_schema(payload: Any, expected_title: str) -> tuple[bool, di
     return True, normalized, ""
 
 
+def _extract_json_candidate(stdout_text: str) -> Any:
+    last_line = stdout_text.splitlines()[-1]
+    try:
+        return json.loads(last_line)
+    except Exception:
+        return extract_first_json(stdout_text)
+
+
 def _extract_structured_result(run_dir: str, artifacts: list[str], stdout: str, expected_title: str) -> tuple[bool, dict[str, Any], str]:
     base_path = Path(run_dir)
     if "result.json" in artifacts:
@@ -198,13 +244,43 @@ def _extract_structured_result(run_dir: str, artifacts: list[str], stdout: str, 
 
     stdout_text = stdout.strip()
     if stdout_text:
-        last_line = stdout_text.splitlines()[-1]
         try:
-            payload = json.loads(last_line)
+            payload = _extract_json_candidate(stdout_text)
         except Exception:
             return False, {}, "missing result.json and stdout is not valid JSON"
         return _validate_result_schema(payload, expected_title)
     return False, {}, "missing result.json and empty stdout"
+
+
+def _code_is_syntax_valid(code: str) -> tuple[bool, str]:
+    source = code.strip()
+    if not source:
+        return False, "generated code is empty"
+    try:
+        ast.parse(source)
+    except SyntaxError as exc:
+        location = f"line {exc.lineno}" if exc.lineno else "unknown line"
+        detail = exc.msg or "invalid syntax"
+        return False, f"{detail} at {location}"
+    return True, ""
+
+
+def _should_retry_with_fallback(*, code: str, fallback_code: str, run_success: bool, schema_valid: bool, stderr: str, schema_error: str) -> bool:
+    if code == fallback_code:
+        return False
+    if run_success and schema_valid:
+        return False
+    combined = "\n".join(part for part in [stderr, schema_error] if part).lower()
+    retry_markers = (
+        "syntaxerror",
+        "invalid syntax",
+        "unterminated string literal",
+        "indentationerror",
+        "typeerror: list.append() takes no keyword arguments",
+        "missing result.json",
+        "failed to parse result.json",
+    )
+    return any(marker in combined for marker in retry_markers)
 
 
 def _primary_task_type(context: dict[str, Any]) -> str:
@@ -330,6 +406,62 @@ if series and pd is not None:
     if library_used == "stdlib":
         library_used = "pandas"
 
+figure_title = f"{{subproblem['title']}}：历史序列与预测结果"
+figure_file = "forecast_plot.svg"
+
+def _write_line_chart(path, title, history, forecast):
+    points = history + [forecast]
+    if not points:
+        return
+    width = 720
+    height = 420
+    left = 70
+    right = 30
+    top = 50
+    bottom = 60
+    plot_w = width - left - right
+    plot_h = height - top - bottom
+    ymin = min(points)
+    ymax = max(points)
+    if ymax == ymin:
+        ymax = ymin + 1.0
+    def _xy(index, value, total):
+        span = max(total - 1, 1)
+        x = left + plot_w * index / span
+        y = top + plot_h * (1.0 - (value - ymin) / (ymax - ymin))
+        return x, y
+    history_points = [_xy(i, value, len(points)) for i, value in enumerate(history)]
+    forecast_point = _xy(len(points) - 1, forecast, len(points))
+    forecast_start = history_points[-1] if history_points else forecast_point
+    x_axis_labels = "".join(
+        f"<text x='{{_xy(i, points[i], len(points))[0]:.1f}}' y='380' font-size='12' text-anchor='middle'>t{{i + 1}}</text>"
+        for i in range(len(points))
+    )
+    y_ticks = []
+    for tick in range(5):
+        value = ymin + (ymax - ymin) * tick / 4
+        y = top + plot_h * (1 - tick / 4)
+        y_ticks.append(
+            f"<line x1='{{left}}' y1='{{y:.1f}}' x2='{{width-right}}' y2='{{y:.1f}}' stroke='#e5e7eb' />"
+            f"<text x='{{left-12}}' y='{{y+4:.1f}}' font-size='12' text-anchor='end'>{{value:.2f}}</text>"
+        )
+    history_polyline = " ".join(f"{{x:.1f}},{{y:.1f}}" for x, y in history_points)
+    svg = f\"\"\"<svg xmlns='http://www.w3.org/2000/svg' width='{{width}}' height='{{height}}' viewBox='0 0 {{width}} {{height}}'>
+<rect width='100%' height='100%' fill='white'/>
+<text x='{{width/2:.1f}}' y='28' font-size='22' text-anchor='middle' fill='#111827'>{{title}}</text>
+<line x1='{{left}}' y1='{{height-bottom}}' x2='{{width-right}}' y2='{{height-bottom}}' stroke='#111827' stroke-width='2'/>
+<line x1='{{left}}' y1='{{top}}' x2='{{left}}' y2='{{height-bottom}}' stroke='#111827' stroke-width='2'/>
+{{''.join(y_ticks)}}
+<polyline points='{{history_polyline}}' fill='none' stroke='#2563eb' stroke-width='3'/>
+<line x1='{{forecast_start[0]:.1f}}' y1='{{forecast_start[1]:.1f}}' x2='{{forecast_point[0]:.1f}}' y2='{{forecast_point[1]:.1f}}' stroke='#dc2626' stroke-width='3' stroke-dasharray='8 6'/>
+<circle cx='{{forecast_point[0]:.1f}}' cy='{{forecast_point[1]:.1f}}' r='5' fill='#dc2626'/>
+<text x='{{forecast_point[0]:.1f}}' y='{{forecast_point[1]-12:.1f}}' font-size='12' text-anchor='middle' fill='#dc2626'>forecast={{forecast:.2f}}</text>
+{{x_axis_labels}}
+</svg>\"\"\"
+    Path(path).write_text(svg, encoding="utf-8")
+
+_write_line_chart(figure_file, figure_title, series, forecast_value)
+
 result = {{
     "subproblem_title": subproblem["title"],
     "status": status,
@@ -355,7 +487,8 @@ result = {{
         "baseline_trend": round(trend, 4),
         "forecast_value": round(forecast_value, 4),
     }},
-    "artifacts": ["result.json", "forecast_metrics.json"],
+    "figure_titles": [figure_title],
+    "artifacts": ["result.json", "forecast_metrics.json", figure_file],
     "next_steps": [
         "Replace the baseline extrapolation with a time-series model if full data is available.",
         "Validate the forecast with MAE, RMSE, or MAPE once a hold-out set is available.",
@@ -487,6 +620,40 @@ if candidate_costs and budget:
         selected_value = float(best_value)
         remaining_budget = float(budget - chosen_cost)
 status = "ok" if candidate_costs and budget else "partial"
+figure_title = f"{{subproblem['title']}}：候选成本与入选方案对比"
+figure_file = "optimization_plan.svg"
+
+def _write_bar_chart(path, title, candidates, selected):
+    values = list(candidates[:8]) or [0.0]
+    selected_values = list(selected[:8])
+    width = 720
+    height = 420
+    left = 70
+    top = 60
+    bottom = 60
+    chart_h = height - top - bottom
+    max_value = max(values + selected_values + [1.0])
+    step = 70
+    bars = []
+    labels = []
+    for index, value in enumerate(values):
+        x = left + index * step
+        bar_h = chart_h * value / max_value
+        y = top + chart_h - bar_h
+        fill = "#2563eb" if value not in selected_values else "#dc2626"
+        bars.append(f"<rect x='{{x}}' y='{{y:.1f}}' width='32' height='{{bar_h:.1f}}' fill='{{fill}}' rx='4'/>")
+        labels.append(f"<text x='{{x + 16}}' y='380' font-size='12' text-anchor='middle'>c{{index + 1}}</text>")
+        labels.append(f"<text x='{{x + 16}}' y='{{y - 8:.1f}}' font-size='12' text-anchor='middle'>{{value:.1f}}</text>")
+    svg = f\"\"\"<svg xmlns='http://www.w3.org/2000/svg' width='{{width}}' height='{{height}}' viewBox='0 0 {{width}} {{height}}'>
+<rect width='100%' height='100%' fill='white'/>
+<text x='{{width/2:.1f}}' y='28' font-size='22' text-anchor='middle' fill='#111827'>{{title}}</text>
+<line x1='{{left-10}}' y1='{{height-bottom}}' x2='{{width-30}}' y2='{{height-bottom}}' stroke='#111827' stroke-width='2'/>
+    {{''.join(bars)}}
+    {{''.join(labels)}}
+</svg>\"\"\"
+    Path(path).write_text(svg, encoding="utf-8")
+
+_write_bar_chart(figure_file, figure_title, candidate_costs, selected_costs)
 result = {{
     "subproblem_title": subproblem["title"],
     "status": status,
@@ -515,7 +682,8 @@ result = {{
         "remaining_budget": round(remaining_budget, 4),
         "selected_item_count": len(selected_costs),
     }},
-    "artifacts": ["result.json", "optimization_summary.json"],
+    "figure_titles": [figure_title],
+    "artifacts": ["result.json", "optimization_summary.json", figure_file],
     "next_steps": [
         "Translate the subproblem into decision variables, objective, and constraints.",
         "Use a proper LP/MIP solver when tabular data becomes available.",
@@ -627,6 +795,38 @@ else:
     path_cost = 0.0
     shortest_path = []
 status = "ok" if numbers else "partial"
+figure_title = f"{{subproblem['title']}}：路径权重与总代价示意"
+figure_file = "path_summary.svg"
+
+def _write_weight_chart(path, title, weights, total_cost):
+    values = list(weights[:8]) or [0.0]
+    width = 720
+    height = 420
+    left = 70
+    top = 60
+    bottom = 60
+    chart_h = height - top - bottom
+    max_value = max(values + [float(total_cost or 0.0), 1.0])
+    step = 70
+    bars = []
+    labels = []
+    for index, value in enumerate(values):
+        x = left + index * step
+        bar_h = chart_h * float(value) / max_value
+        y = top + chart_h - bar_h
+        bars.append(f"<rect x='{{x}}' y='{{y:.1f}}' width='32' height='{{bar_h:.1f}}' fill='#0f766e' rx='4'/>")
+        labels.append(f"<text x='{{x + 16}}' y='380' font-size='12' text-anchor='middle'>w{{index + 1}}</text>")
+    svg = f\"\"\"<svg xmlns='http://www.w3.org/2000/svg' width='{{width}}' height='{{height}}' viewBox='0 0 {{width}} {{height}}'>
+<rect width='100%' height='100%' fill='white'/>
+<text x='{{width/2:.1f}}' y='28' font-size='22' text-anchor='middle' fill='#111827'>{{title}}</text>
+<text x='{{width-40}}' y='50' font-size='14' text-anchor='end' fill='#111827'>total={{total_cost:.2f}}</text>
+<line x1='{{left-10}}' y1='{{height-bottom}}' x2='{{width-30}}' y2='{{height-bottom}}' stroke='#111827' stroke-width='2'/>
+{{''.join(bars)}}
+{{''.join(labels)}}
+</svg>\"\"\"
+    Path(path).write_text(svg, encoding="utf-8")
+
+_write_weight_chart(figure_file, figure_title, numbers, path_cost)
 result = {{
     "subproblem_title": subproblem["title"],
     "status": status,
@@ -652,7 +852,8 @@ result = {{
         "path_cost": round(path_cost, 4),
         "node_count": len(path_nodes),
     }},
-    "artifacts": ["result.json", "path_summary.json"],
+    "figure_titles": [figure_title],
+    "artifacts": ["result.json", "path_summary.json", figure_file],
     "next_steps": [
         "Provide an explicit graph or distance matrix for exact shortest-path or routing calculations.",
         "Add capacity or time-window data if this is a VRP-style task.",
@@ -756,6 +957,37 @@ else:
     normalized = []
     best_rank = 0
 status = "ok" if numbers else "partial"
+figure_title = f"{{subproblem['title']}}：评价指标得分分布"
+figure_file = "evaluation_scores.svg"
+
+def _write_score_chart(path, title, scores):
+    values = list(scores[:8]) or [0.0]
+    width = 720
+    height = 420
+    left = 70
+    top = 60
+    bottom = 60
+    chart_h = height - top - bottom
+    max_value = max(values + [1.0])
+    step = 70
+    bars = []
+    labels = []
+    for index, value in enumerate(values):
+        x = left + index * step
+        bar_h = chart_h * float(value) / max_value
+        y = top + chart_h - bar_h
+        bars.append(f"<rect x='{{x}}' y='{{y:.1f}}' width='32' height='{{bar_h:.1f}}' fill='#7c3aed' rx='4'/>")
+        labels.append(f"<text x='{{x + 16}}' y='380' font-size='12' text-anchor='middle'>s{{index + 1}}</text>")
+    svg = f\"\"\"<svg xmlns='http://www.w3.org/2000/svg' width='{{width}}' height='{{height}}' viewBox='0 0 {{width}} {{height}}'>
+<rect width='100%' height='100%' fill='white'/>
+<text x='{{width/2:.1f}}' y='28' font-size='22' text-anchor='middle' fill='#111827'>{{title}}</text>
+<line x1='{{left-10}}' y1='{{height-bottom}}' x2='{{width-30}}' y2='{{height-bottom}}' stroke='#111827' stroke-width='2'/>
+{{''.join(bars)}}
+{{''.join(labels)}}
+</svg>\"\"\"
+    Path(path).write_text(svg, encoding="utf-8")
+
+_write_score_chart(figure_file, figure_title, numbers)
 result = {{
     "subproblem_title": subproblem["title"],
     "status": status,
@@ -780,7 +1012,8 @@ result = {{
         "max_score": round(max_score, 4),
         "best_rank": best_rank,
     }},
-    "artifacts": ["result.json", "evaluation_summary.json"],
+    "figure_titles": [figure_title],
+    "artifacts": ["result.json", "evaluation_summary.json", figure_file],
     "next_steps": [
         "Add explicit indicator definitions and directions before formal ranking.",
         "Use AHP, entropy weighting, or TOPSIS once a complete indicator table is available.",
@@ -843,6 +1076,38 @@ else:
 status = "partial"
 if numbers:
     status = "ok"
+figure_title = f"{{subproblem['title']}}：关键数值概览"
+figure_file = "solver_summary.svg"
+
+def _write_generic_chart(path, title, values):
+    bars = list(values[:8]) or [0.0]
+    width = 720
+    height = 420
+    left = 70
+    top = 60
+    bottom = 60
+    chart_h = height - top - bottom
+    max_value = max([abs(float(v)) for v in bars] + [1.0])
+    step = 70
+    rects = []
+    labels = []
+    for index, value in enumerate(bars):
+        numeric = float(value)
+        bar_h = chart_h * abs(numeric) / max_value
+        x = left + index * step
+        y = top + chart_h - bar_h
+        rects.append(f"<rect x='{{x}}' y='{{y:.1f}}' width='32' height='{{bar_h:.1f}}' fill='#2563eb' rx='4'/>")
+        labels.append(f"<text x='{{x + 16}}' y='380' font-size='12' text-anchor='middle'>n{{index + 1}}</text>")
+    svg = f\"\"\"<svg xmlns='http://www.w3.org/2000/svg' width='{{width}}' height='{{height}}' viewBox='0 0 {{width}} {{height}}'>
+<rect width='100%' height='100%' fill='white'/>
+<text x='{{width/2:.1f}}' y='28' font-size='22' text-anchor='middle' fill='#111827'>{{title}}</text>
+<line x1='{{left-10}}' y1='{{height-bottom}}' x2='{{width-30}}' y2='{{height-bottom}}' stroke='#111827' stroke-width='2'/>
+{{''.join(rects)}}
+{{''.join(labels)}}
+</svg>\"\"\"
+    Path(path).write_text(svg, encoding="utf-8")
+
+_write_generic_chart(figure_file, figure_title, numbers)
 result = {{
     "subproblem_title": subproblem["title"],
     "status": status,
@@ -865,7 +1130,8 @@ result = {{
         "first_number": first_number,
         "mean_value": round(mean_value, 4) if numbers else "n/a",
     }},
-    "artifacts": ["result.json", "solver_notes.md"],
+    "figure_titles": [figure_title] if numbers else [],
+    "artifacts": ["result.json", "solver_notes.md", figure_file] if numbers else ["result.json", "solver_notes.md"],
     "next_steps": [
         "Replace fallback logic with a domain-specific solver if numeric accuracy matters.",
         "Provide data tables or parameters for formal optimization or forecasting.",
@@ -903,9 +1169,10 @@ def _build_fallback_solver_code(context: dict[str, Any]) -> tuple[str, str]:
 
 def _build_llm_solver(state: TaskState, subproblem: SubProblem, index: int) -> tuple[str, str]:
     context = _build_solver_context(state, subproblem, index)
+    fallback_summary, fallback_code = _build_fallback_solver_code(context)
     cfg = load_llm_config("CODING")
     if cfg is None:
-        return _build_fallback_solver_code(context)
+        return fallback_summary, fallback_code
 
     llm = build_llm(cfg)
     response = llm.chat(
@@ -928,14 +1195,26 @@ def _build_llm_solver(state: TaskState, subproblem: SubProblem, index: int) -> t
             summary = str(payload.get("summary") or "").strip() or f"Generated solver for {subproblem.title}."
             code = _extract_code_block(str(payload.get("code") or ""))
             if code:
-                return summary, code
+                is_valid, syntax_error = _code_is_syntax_valid(code)
+                if is_valid:
+                    return summary, code
+                return (
+                    f"{fallback_summary} Fallback was used because generated code had invalid syntax: {syntax_error}.",
+                    fallback_code,
+                )
     except Exception:
         pass
 
     code = _extract_code_block(response)
     if code:
-        return f"Generated solver for {subproblem.title}.", code
-    return _build_fallback_solver_code(context)
+        is_valid, syntax_error = _code_is_syntax_valid(code)
+        if is_valid:
+            return f"Generated solver for {subproblem.title}.", code
+        return (
+            f"{fallback_summary} Fallback was used because generated code had invalid syntax: {syntax_error}.",
+            fallback_code,
+        )
+    return fallback_summary, fallback_code
 
 
 def _required_report_sections() -> list[str]:
@@ -1105,18 +1384,20 @@ class CodingAgent:
         state.solver_runs = []
         structured_results: list[dict[str, Any]] = []
         for index, subproblem in enumerate(state.subproblems, start=1):
+            context = _build_solver_context(state, subproblem, index)
+            fallback_summary, fallback_code = _build_fallback_solver_code(context)
             generation_error = ""
             try:
                 summary, code = _build_llm_solver(state, subproblem, index)
             except Exception as exc:
-                summary, code = _build_fallback_solver_code(_build_solver_context(state, subproblem, index))
+                summary, code = fallback_summary, fallback_code
                 generation_error = str(exc)
 
             result = tool.run(
                 {
                     "code": code,
                     "filename": f"solver_{index}.py",
-                    "context": _build_solver_context(state, subproblem, index),
+                    "context": context,
                     "timeout_s": 20.0,
                 }
             )
@@ -1127,10 +1408,48 @@ class CodingAgent:
                 str(result.get("stdout") or ""),
                 subproblem.title,
             )
+            stderr_text = str(result.get("stderr") or "")
             if generation_error:
-                stderr_text = str(result.get("stderr") or "") + f"\nRecovered from CODING generation failure: {generation_error}"
-            else:
-                stderr_text = str(result.get("stderr") or "")
+                stderr_text = (stderr_text + f"\nRecovered from CODING generation failure: {generation_error}").strip()
+
+            if _should_retry_with_fallback(
+                code=code,
+                fallback_code=fallback_code,
+                run_success=run_success,
+                schema_valid=schema_valid,
+                stderr=stderr_text,
+                schema_error=schema_error,
+            ):
+                fallback_result = tool.run(
+                    {
+                        "code": fallback_code,
+                        "filename": f"solver_{index}_fallback.py",
+                        "context": context,
+                        "timeout_s": 20.0,
+                    }
+                )
+                fallback_run_success = bool(fallback_result.get("success"))
+                fallback_schema_valid, fallback_structured_result, fallback_schema_error = _extract_structured_result(
+                    str(fallback_result.get("run_dir") or ""),
+                    [str(name) for name in fallback_result.get("artifacts") or []],
+                    str(fallback_result.get("stdout") or ""),
+                    subproblem.title,
+                )
+                if fallback_run_success or fallback_schema_valid:
+                    stderr_parts = [stderr_text, "Retried with fallback solver after CODING execution failure."]
+                    fallback_stderr = str(fallback_result.get("stderr") or "")
+                    if fallback_stderr:
+                        stderr_parts.append(f"Fallback stderr: {fallback_stderr}")
+                    if fallback_schema_error:
+                        stderr_parts.append(f"Fallback schema validation failed: {fallback_schema_error}")
+                    stderr_text = "\n".join(part for part in stderr_parts if part).strip()
+                    result = fallback_result
+                    run_success = fallback_run_success
+                    schema_valid = fallback_schema_valid
+                    structured_result = fallback_structured_result
+                    schema_error = fallback_schema_error
+                    summary = f"{fallback_summary} Retried automatically after CODING execution failed."
+                    code = fallback_code
 
             if not run_success and not structured_result:
                 structured_result = {
@@ -1143,6 +1462,7 @@ class CodingAgent:
                     "result_summary": "Execution failed before a structured result was produced.",
                     "evidence": ["python_exec returned a non-zero exit status"],
                     "numeric_results": {},
+                    "figure_titles": [],
                     "artifacts": [str(name) for name in result.get("artifacts") or []],
                     "next_steps": ["Inspect stderr and generated code before retrying."],
                 }
@@ -1343,7 +1663,7 @@ class WritingAgent:
                     ],
                     temperature=0.2,
                 )
-                state.report_md = report.strip()
+                state.report_md = inject_figure_titles(report.strip(), state)
             except Exception as exc:
                 memory.set_agent_json(self.name, "llm_error", {"error": str(exc)})
                 memory.append_event("agent", self.name, "llm_error", {"error": str(exc)})
@@ -1352,6 +1672,7 @@ class WritingAgent:
             state = ReportSkill().run(state, tools)
 
         if state.report_md is not None:
+            state.report_md = inject_figure_titles(state.report_md, state)
             memory.set_shared("report_md", state.report_md)
             state.stage = "review"
         memory.append_event("agent", self.name, "done", {"stage": state.stage})

@@ -162,12 +162,15 @@ python -m mathagent --problem-file problems/your_problem.txt --report-section ab
 
 常见参数：
 
+处理 PDF 时，程序现在会默认自动尝试 OCR；如果 OCR 依赖不可用，会自动回退到普通文字提取。
+
 - `--problem-file`：输入题目文件，支持文本和 PDF 处理流程
 - `--data-file`：附加 CSV、JSON 或 XLSX 数据文件，可重复传入
 - `--db-path`：运行记忆数据库路径，默认 `data/mathagent.db`
 - `--out-dir`：输出目录，默认 `outputs`
 - `--report-section`：只导出指定章节，可重复传入
-- `--ocr`：处理 PDF 时启用 OCR
+- `--ocr`：强制对 PDF 启用 OCR
+- `--no-ocr`：关闭 PDF 的自动 OCR
 - `--ocr-mode`：OCR 模式，可选 `auto`、`images`、`page`
 
 ## Web 端说明
@@ -244,12 +247,51 @@ python -m mathagent --problem-file problems/your_problem.txt --report-section ab
 1. 复制 `config/llm.example.json`
 2. 重命名为 `config/llm.json`
 3. 在里面填写你自己的接口信息
+4. 修改完成后重新启动后端或重新运行命令
 
 仓库已经通过 `.gitignore` 忽略了 `config/llm.json`，所以真实 API Key 建议只放在本地文件里，不要提交到 GitHub。
 
-### 1. 推荐方式：`config/llm.json`
+程序默认会读取：
 
-最小示例：
+- `config/llm.json`
+
+如果你想换成别的路径，也可以设置：
+
+- `MATHAGENT_LLM_CONFIG`
+
+### 1. 最推荐的写法：先写 `DEFAULT`，再按角色覆盖
+
+现在配置文件支持一个公共默认段 `DEFAULT`。它会先作为所有角色的基础配置，再被各角色自己的字段覆盖。
+
+也就是说，如果你五个角色共用同一个中转站和 Key，只需要在 `DEFAULT` 里写一次；只有某个角色想换模型时，再单独写该角色的 `model` 即可。
+
+推荐模板：
+
+```json
+{
+  "DEFAULT": {
+    "provider": "openai_compat",
+    "base_url": "https://api.openai.com",
+    "api_key": "replace-with-your-api-key",
+    "model": "gpt-4o-mini"
+  },
+  "MANAGER": {},
+  "MODELING": {
+    "model": "gpt-4.1-mini"
+  },
+  "CODING": {
+    "model": "gpt-4.1-mini"
+  },
+  "REVIEW": {},
+  "WRITING": {
+    "model": "gpt-4o-mini"
+  }
+}
+```
+
+如果你想让每个角色都走同一套接口，这就是最省事的写法。
+
+如果你更喜欢完全展开写，也可以：
 
 ```json
 {
@@ -257,7 +299,13 @@ python -m mathagent --problem-file problems/your_problem.txt --report-section ab
     "provider": "openai_compat",
     "base_url": "https://api.openai.com",
     "api_key": "your-modeling-key",
-    "model": "gpt-4o-mini"
+    "model": "gpt-4.1-mini"
+  },
+  "CODING": {
+    "provider": "openai_compat",
+    "base_url": "https://api.openai.com",
+    "api_key": "your-coding-key",
+    "model": "gpt-4.1-mini"
   },
   "WRITING": {
     "provider": "openai_compat",
@@ -268,7 +316,7 @@ python -m mathagent --problem-file problems/your_problem.txt --report-section ab
 }
 ```
 
-当前支持的角色段名有：
+当前可识别的角色段名有：
 
 - `MANAGER`
 - `MODELING`
@@ -276,44 +324,7 @@ python -m mathagent --problem-file problems/your_problem.txt --report-section ab
 - `REVIEW`
 - `WRITING`
 
-也就是说，`config/llm.json` 顶层就写这些 key。
-
-完整示例：
-
-```json
-{
-  "MANAGER": {
-    "provider": "openai_compat",
-    "base_url": "https://api.openai.com",
-    "api_key": "your-manager-key",
-    "model": "gpt-4o-mini"
-  },
-  "MODELING": {
-    "provider": "openai_compat",
-    "base_url": "https://api.openai.com",
-    "api_key": "your-modeling-key",
-    "model": "gpt-4o-mini"
-  },
-  "CODING": {
-    "provider": "openai_compat",
-    "base_url": "https://api.openai.com",
-    "api_key": "your-coding-key",
-    "model": "gpt-4o-mini"
-  },
-  "REVIEW": {
-    "provider": "openai_compat",
-    "base_url": "https://api.openai.com",
-    "api_key": "your-review-key",
-    "model": "gpt-4o-mini"
-  },
-  "WRITING": {
-    "provider": "openai_compat",
-    "base_url": "https://api.openai.com",
-    "api_key": "your-writing-key",
-    "model": "gpt-4o-mini"
-  }
-}
-```
+顶层里出现其他 key 不会被当作角色读取，所以你也可以像示例文件那样额外保留一个 `CUSTOM_HTTP_EXAMPLE` 作为参考模板。
 
 字段说明：
 
@@ -340,12 +351,9 @@ python -m mathagent --problem-file problems/your_problem.txt --report-section ab
 
 含义可以简单理解成：
 
-- `openai`、`openai_compat`、`deepseek`、`qwen`、`bytedance`、`google`
-  这些名称当前都走 OpenAI 兼容客户端
-- `aliyun`、`dashscope`、`alibaba`
-  这些名称当前走 DashScope 客户端
-- `custom_http`
-  给那些不完全兼容 OpenAI 格式的中转站或自建接口使用
+- `openai`、`openai_compat`、`deepseek`、`qwen`、`bytedance`、`google`：当前都走 OpenAI 兼容客户端
+- `aliyun`、`dashscope`、`alibaba`：当前走 DashScope 客户端
+- `custom_http`：给那些不完全兼容 OpenAI 格式的中转站或自建接口使用
 
 ### 3. 什么叫 OpenAI 兼容
 
@@ -399,7 +407,8 @@ python -m mathagent --problem-file problems/your_problem.txt --report-section ab
         "messages": "$messages",
         "temperature": "$temperature"
       },
-      "response_path": "choices.0.message.content"
+      "response_path": "choices.0.message.content",
+      "timeout_s": 120
     }
   }
 }
@@ -411,6 +420,7 @@ python -m mathagent --problem-file problems/your_problem.txt --report-section ab
 - `headers`：自定义请求头
 - `body`：自定义请求体模板
 - `response_path`：从返回 JSON 中提取文本的路径
+- `timeout_s`：请求超时时间（秒）
 
 模板里可用的占位符有：
 
@@ -459,15 +469,40 @@ $env:MODELING_MODEL = "gpt-4o-mini"
 如果你现在的目标只是先跑通项目，建议直接这样做：
 
 1. 复制 `config/llm.example.json` 为 `config/llm.json`
-2. 先配置 `MODELING` 和 `WRITING`
-3. 如果接口是标准 OpenAI 风格，优先用 `openai_compat`
-4. 只有当中转站的请求或返回格式不标准时，再改用 `custom_http`
+2. 先只改 `DEFAULT` 里的 `base_url`、`api_key`、`model`
+3. 如果 `MODELING`、`CODING`、`WRITING` 需要不同模型，再分别覆盖
+4. 如果接口是标准 OpenAI 风格，优先用 `openai_compat`
+5. 只有当中转站的请求或返回格式不标准时，再改用 `custom_http`
 
 补充说明：
 
-- 当前代码里，`MODELING` 和 `WRITING` 是直接会用到 LLM 的核心角色
-- `MANAGER` 的配置会被记录到运行记忆里，方便后续扩展
-- `CODING` 和 `REVIEW` 的配置段已经预留好了，后续你可以继续把它们接上
+- 当前代码里，`MODELING`、`CODING`、`WRITING` 会直接调用 LLM
+- `MANAGER` 当前主要记录配置快照，方便运行追踪和后续扩展
+- `REVIEW` 的配置段已经预留，但当前主体仍以规则校验为主
+
+### 7. 一个最常见的实际配置例子
+
+如果你现在是通过某个 OpenAI 兼容中转站来调用模型，通常只需要这样：
+
+```json
+{
+  "DEFAULT": {
+    "provider": "openai_compat",
+    "base_url": "https://your-relay.example.com",
+    "api_key": "sk-xxxxx",
+    "model": "gpt-4o-mini"
+  },
+  "CODING": {
+    "model": "gpt-4.1-mini"
+  }
+}
+```
+
+这表示：
+
+- 其余角色默认都用 `gpt-4o-mini`
+- 只有 `CODING` 单独改成 `gpt-4.1-mini`
+- 所有角色共享同一个 `base_url` 和 `api_key`
 
 ## 测试
 

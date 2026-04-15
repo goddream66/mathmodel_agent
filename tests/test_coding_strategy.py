@@ -29,7 +29,10 @@ class CodingStrategyTest(unittest.TestCase):
             self.assertTrue(run.structured_result["method"])
             self.assertTrue(run.structured_result["result_summary"])
             self.assertTrue(run.structured_result["evidence"])
+            self.assertIn("figure_titles", run.structured_result)
+            self.assertTrue(run.structured_result["figure_titles"])
             self.assertIn("result.json", run.artifacts)
+            self.assertTrue(any(name.endswith(".svg") for name in run.artifacts))
 
 
 if __name__ == "__main__":

@@ -32,18 +32,34 @@ def _coerce_options(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+def _get_config_section(file_config: dict[str, Any], name: str) -> dict[str, Any]:
+    section = file_config.get(name)
+    if section is None:
+        section = file_config.get(name.lower())
+    if section is None:
+        return {}
+    if not isinstance(section, dict):
+        raise ValueError(f"LLM config section must be an object: {name}")
+    return section
+
+
+def _merge_config_dict(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged: dict[str, Any] = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge_config_dict(dict(merged[key]), value)
+        else:
+            merged[key] = value
+    return merged
+
+
 def load_llm_config(prefix: str, *, config_path: str | Path | None = None) -> LLMConfig | None:
     section_name = _normalize_section_name(prefix)
     path = Path(config_path) if config_path is not None else _default_config_path()
     file_config = _load_file_config(path)
 
-    section = file_config.get(section_name)
-    if section is None:
-        section = file_config.get(section_name.lower())
-    if section is None:
-        section = {}
-    if not isinstance(section, dict):
-        raise ValueError(f"LLM config section must be an object: {section_name}")
+    default_section = _get_config_section(file_config, "DEFAULT")
+    section = _merge_config_dict(default_section, _get_config_section(file_config, section_name))
 
     p = section_name + "_"
     api_key = str(section.get("api_key") or os.getenv(p + "API_KEY", "")).strip()

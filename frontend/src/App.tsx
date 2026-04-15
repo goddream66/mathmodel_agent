@@ -4,6 +4,7 @@ import {
   createSession,
   deleteSession,
   getMeta,
+  getReport,
   getSession,
   listSessions,
   runSession,
@@ -43,12 +44,19 @@ export default function App() {
         }
         const nextSession =
           sessionsPayload.sessions[0] ?? (await createSession());
+        const nextReport =
+          nextSession.report_ready
+            ? await getReport(nextSession.session_id, nextSession.selected_sections)
+            : null;
+        if (cancelled) {
+          return;
+        }
         startTransition(() => {
           setSectionOptions(meta.sections);
           setSessionHistory(sessionsPayload.sessions.length > 0 ? sessionsPayload.sessions : [nextSession]);
           setSession(nextSession);
           setSelectedSections(nextSession.selected_sections);
-          setReportMarkdown(nextSession.latest_report_md ?? "");
+          setReportMarkdown(nextReport?.selected_report_md ?? "");
           setStatusMessage("Session ready. Add the problem statement, upload files, then run the pipeline.");
         });
       } catch (error) {
@@ -76,8 +84,11 @@ export default function App() {
     setErrorMessage("");
     try {
       const payload = await setSections(session.session_id, nextSections);
+      const report =
+        payload.report_ready ? await getReport(payload.session_id, payload.selected_sections) : null;
       startTransition(() => {
         syncSessionState(payload);
+        setReportMarkdown(report?.selected_report_md ?? payload.latest_report_md ?? "");
         setStatusMessage(
           payload.selected_sections.length === 0
             ? "Report section filter reset to full draft."
@@ -184,9 +195,11 @@ export default function App() {
     setErrorMessage("");
     try {
       const payload = await getSession(sessionId);
+      const report =
+        payload.report_ready ? await getReport(payload.session_id, payload.selected_sections) : null;
       startTransition(() => {
         syncSessionState(payload);
-        setReportMarkdown(payload.latest_report_md ?? "");
+        setReportMarkdown(report?.selected_report_md ?? payload.latest_report_md ?? "");
         setStatusMessage("Restored a previous session.");
       });
     } catch (error) {

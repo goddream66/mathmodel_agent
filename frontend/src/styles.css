@@ -427,6 +427,16 @@ input {
   font-family: "IBM Plex Mono", monospace;
 }
 
+.markdown-shell .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.35rem 0;
+}
+
+.markdown-shell .katex {
+  font-size: 1.02em;
+}
+
 .empty-state,
 .muted-block {
   padding: 18px;

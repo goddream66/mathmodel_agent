@@ -1,4 +1,4 @@
-import type { ReportSection, SessionSummary } from "./types";
+import type { ReportPayload, ReportSection, SessionSummary } from "./types";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
@@ -34,6 +34,15 @@ export async function listSessions(): Promise<{ sessions: SessionSummary[] }> {
 
 export async function getSession(sessionId: string): Promise<SessionSummary> {
   return request<SessionSummary>(`/api/sessions/${sessionId}`);
+}
+
+export async function getReport(sessionId: string, sections: string[] = []): Promise<ReportPayload> {
+  const params = new URLSearchParams();
+  for (const section of sections) {
+    params.append("sections", section);
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return request<ReportPayload>(`/api/sessions/${sessionId}/report${suffix}`);
 }
 
 export async function getMeta(): Promise<{ sections: ReportSection[] }> {

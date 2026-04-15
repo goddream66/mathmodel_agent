@@ -1,0 +1,7 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='720' height='420' viewBox='0 0 720 420'>
+<rect width='100%' height='100%' fill='white'/>
+<text x='360.0' y='28' font-size='22' text-anchor='middle' fill='#111827'>Problem 4：评价指标得分分布</text>
+<line x1='60' y1='360' x2='690' y2='360' stroke='#111827' stroke-width='2'/>
+<rect x='70' y='96.3' width='32' height='263.7' fill='#7c3aed' rx='4'/><rect x='140' y='109.5' width='32' height='250.5' fill='#7c3aed' rx='4'/><rect x='210' y='60.0' width='32' height='300.0' fill='#7c3aed' rx='4'/>
+<text x='86' y='380' font-size='12' text-anchor='middle'>s1</text><text x='156' y='380' font-size='12' text-anchor='middle'>s2</text><text x='226' y='380' font-size='12' text-anchor='middle'>s3</text>
+</svg>

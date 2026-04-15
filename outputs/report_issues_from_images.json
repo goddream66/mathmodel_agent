@@ -1,0 +1,157 @@
+{
+  "source": "uploaded_images",
+  "document_title": "无人机逐行编队飞行中的纯方位无源定位",
+  "analysis_scope": "根据用户提供的报告截图提取报告中的技术问题、求解失败点和结构性问题",
+  "subproblems": [
+    {
+      "id": "problem1_1",
+      "title": "三发射源已知定位模型",
+      "status": "solver_failed",
+      "report_claim": "理论上可以通过三个已知位置的发射源确定接收无人机位置。",
+      "issues": [
+        {
+          "type": "syntax_error",
+          "severity": "high",
+          "message": "求解器执行失败，报错为 SyntaxError: invalid syntax。",
+          "impact": "无法给出该模型的数值验证结果。"
+        }
+      ],
+      "numeric_results_available": false,
+      "recommended_fix": "检查生成代码中的语法错误，修复后重新执行定位求解与验证。"
+    },
+    {
+      "id": "problem1_2",
+      "title": "最少发射源数量确定",
+      "status": "partially_valid",
+      "report_claim": "除 FY00 和 FY01 外，还需要 3 架无人机发射信号才能实现有效定位。",
+      "issues": [
+        {
+          "type": "schema_validation_failed",
+          "severity": "medium",
+          "message": "模式验证失败，原因是 evidence 列表为空。",
+          "impact": "结论虽然给出了可用的自由度分析数值，但缺乏证据链支撑。"
+        }
+      ],
+      "validated_numeric_results": {
+        "minimum_additional_transmitters": 3,
+        "total_transmitters_needed": 5,
+        "angle_measurements_with_5_transmitters": 9,
+        "unknowns_with_5_transmitters": 8,
+        "degrees_of_freedom_redundancy": 1
+      },
+      "recommended_fix": "为自由度分析补充 evidence 字段，例如推导过程、约束计数依据和中间计算说明。"
+    },
+    {
+      "id": "problem1_3",
+      "title": "圆形编队位置调整方案",
+      "status": "solver_failed",
+      "report_claim": "已给出基于初始位置偏差的迭代调整思路，但未完成完整数值实验。",
+      "issues": [
+        {
+          "type": "runtime_error",
+          "severity": "high",
+          "message": "求解器执行失败，报错为 TypeError: list.append() takes no keyword arguments。",
+          "impact": "无法输出完整的调整方案和数值验证结果。"
+        }
+      ],
+      "partial_analysis": {
+        "max_radius_deviation_m": 12,
+        "worst_radius_deviation_uavs": [
+          "FY03",
+          "FY06",
+          "FY09"
+        ],
+        "max_angle_deviation_deg": 0.28,
+        "worst_angle_deviation_uav": "FY09"
+      },
+      "recommended_fix": "修复列表追加逻辑后，重新执行迭代调整代码，并输出完整调整轨迹与收敛结果。"
+    },
+    {
+      "id": "problem2",
+      "title": "锥形编队位置调整方案",
+      "status": "solver_failed",
+      "report_claim": "提出了锥形编队下的发射源选择、角度测量和位置优化方案。",
+      "issues": [
+        {
+          "type": "syntax_error",
+          "severity": "high",
+          "message": "求解器执行失败，报错为 SyntaxError: unterminated string literal。",
+          "impact": "无法提供完整数值验证结果。"
+        },
+        {
+          "type": "code_generation_error",
+          "severity": "high",
+          "message": "报告指出代码文件开头的 JSON 字符串未正确终止。",
+          "impact": "说明生成代码的结构化输出模板本身存在拼接问题。"
+        }
+      ],
+      "numeric_results_available": false,
+      "recommended_fix": "检查生成代码开头的 JSON 模板或字符串拼接逻辑，避免未闭合字符串。"
+    }
+  ],
+  "cross_cutting_issues": [
+    {
+      "type": "multiple_solver_failures",
+      "severity": "high",
+      "message": "4 个子问题中有 3 个发生求解器执行失败，仅 1 个子问题给出了部分可信结果。",
+      "affected_sections": [
+        "4.1",
+        "4.3",
+        "4.4",
+        "5.1",
+        "5.3",
+        "5.4",
+        "6.2"
+      ]
+    },
+    {
+      "type": "evidence_chain_incomplete",
+      "severity": "medium",
+      "message": "问题1(2)给出了数值结论，但 evidence 为空，导致模式验证失败。",
+      "affected_sections": [
+        "4.2",
+        "5.2",
+        "6.2"
+      ]
+    },
+    {
+      "type": "math_rendering_issue",
+      "severity": "medium",
+      "message": "报告中的部分 LaTeX/公式以原始文本形式显示，说明公式渲染链路不完整。",
+      "examples": [
+        "$P_1(x_1, y_1)$",
+        "$\\angle P_1PP_2$",
+        "$C(n,2)-1=\\frac{n(n-1)}{2}-1$"
+      ]
+    },
+    {
+      "type": "results_incomplete",
+      "severity": "high",
+      "message": "报告结论部分明确写出：部分子问题求解器执行失败，数值结果不完整，需要后续补充验证。"
+    }
+  ],
+  "overall_assessment": {
+    "report_status": "partially_completed_with_major_execution_issues",
+    "successful_subproblems": [
+      "problem1_2"
+    ],
+    "failed_subproblems": [
+      "problem1_1",
+      "problem1_3",
+      "problem2"
+    ],
+    "main_blockers": [
+      "代码生成后的语法错误",
+      "运行时列表操作错误",
+      "结构化 evidence 缺失",
+      "公式渲染链路不完整"
+    ]
+  },
+  "recommended_next_actions": [
+    "优先修复 Coding 阶段生成代码中的字符串拼接和语法问题。",
+    "为 structured_result 强制补齐 evidence 字段，避免 schema validation failed。",
+    "对问题1(3)和问题2重新执行实验，补齐数值验证结果。",
+    "在前端或 Markdown 渲染层补上 LaTeX 数学公式渲染支持。",
+    "将本 JSON 作为 review 输入，用于后续自动修复和验证流程。"
+  ]
+}

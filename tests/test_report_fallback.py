@@ -14,6 +14,8 @@ class ReportFallbackTest(unittest.TestCase):
         self.assertIn("Numeric Results", state.report_md)
         self.assertIn("Evidence", state.report_md)
         self.assertIn("forecast_value", state.report_md)
+        self.assertIn("Figure Titles", state.report_md)
+        self.assertIn("图表标题", state.report_md)
 
 
 if __name__ == "__main__":
