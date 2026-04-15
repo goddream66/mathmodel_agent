@@ -10,7 +10,7 @@ Solver runs (JSON):
 Review findings (JSON):
 {review_findings_json}
 
-Write Markdown with the following sections:
+Write Markdown with the following top-level sections:
 - 摘要
 - 问题重述
 - 子问题分析与方法选择
@@ -19,6 +19,9 @@ Write Markdown with the following sections:
 - 结果与分析
 - 结论与后续工作
 
-Explain the model or algorithm and the solution steps for each sub-problem.
-For each sub-problem, cite numeric_results and evidence from the solver runs.
-If a solver run failed or evidence is missing, state that clearly instead of inventing results.
+Requirements:
+- Use the exact subproblem titles from subproblems_json as subsection titles.
+- For each subproblem, explain the model, algorithm, and solution steps.
+- For each subproblem, cite at least one numeric_results field or one evidence marker from the corresponding solver run.
+- If figure_titles are present in a solver result, explicitly list those chart titles in the relevant section.
+- If a solver run failed or evidence is missing, state that clearly instead of inventing results.

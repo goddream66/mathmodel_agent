@@ -1,0 +1,11 @@
+{
+  "candidate_costs": [
+    100.0
+  ],
+  "selected_costs": [
+    100.0
+  ],
+  "budget": 100.0,
+  "chosen_cost": 100.0,
+  "remaining_budget": 0.0
+}

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..reporting import REPORT_SECTION_SPECS
+from ..reporting import REPORT_SECTION_SPECS, extract_report_section
 from ..state import TaskState
 
 
@@ -51,11 +51,12 @@ def build_verification_summary(state: TaskState) -> dict[str, Any]:
         )
 
     report_sources = build_report_sources(state)
+    tracked_sections = ("analysis", "solving", "results", "conclusion")
     uncited_subproblems = sorted(
         {
             title
-            for data in report_sources.values()
-            for title in data.get("missing_subproblems", [])
+            for key in tracked_sections
+            for title in report_sources.get(key, {}).get("missing_subproblems", [])
         }
     )
     missing_required_sections = [
@@ -89,8 +90,7 @@ def build_report_sources(state: TaskState) -> dict[str, dict[str, Any]]:
     sources: dict[str, dict[str, Any]] = {}
 
     for spec in REPORT_SECTION_SPECS:
-        heading = f"# {spec.title}"
-        section_text = _extract_section(report_md, heading)
+        section_text = extract_report_section(report_md, spec.key)
         referenced_subproblems = [title for title in solver_titles if title in section_text]
         referenced_artifacts = [
             artifact.name
@@ -98,21 +98,28 @@ def build_report_sources(state: TaskState) -> dict[str, dict[str, Any]]:
             if artifact.name and artifact.name in section_text
         ]
         evidence_markers: list[str] = []
+        numeric_result_keys: list[str] = []
         for run in state.solver_runs:
             for evidence in run.structured_result.get("evidence", []):
                 marker = str(evidence)
                 if marker and marker in section_text and marker not in evidence_markers:
                     evidence_markers.append(marker)
+            for key in dict(run.structured_result.get("numeric_results", {})).keys():
+                marker = str(key)
+                if marker and marker in section_text and marker not in numeric_result_keys:
+                    numeric_result_keys.append(marker)
         missing_subproblems = [title for title in solver_titles if solver_titles and title not in referenced_subproblems]
         sources[spec.key] = {
-            "heading": heading,
+            "heading": spec.heading,
             "present": bool(section_text.strip()),
             "referenced_subproblems": referenced_subproblems,
             "referenced_artifacts": referenced_artifacts,
             "evidence_markers": evidence_markers,
+            "numeric_result_keys": numeric_result_keys,
             "referenced_subproblem_count": len(referenced_subproblems),
             "referenced_artifact_count": len(referenced_artifacts),
             "referenced_evidence_count": len(evidence_markers),
+            "referenced_numeric_count": len(numeric_result_keys),
             "missing_subproblems": missing_subproblems,
         }
 
@@ -172,36 +179,33 @@ def build_verification_findings(
             }
         )
 
-    for key in ("solving", "results"):
-        section = report_sources.get(key, {})
-        if section.get("present") and not section.get("referenced_evidence_count"):
-            findings.append(
-                {
-                    "severity": "medium",
-                    "area": "writing",
-                    "message": f"The {key} section does not explicitly cite solver evidence markers.",
-                    "suggestion": "Reference numeric results, artifacts, or evidence items directly in this section.",
-                }
-            )
+    solving = report_sources.get("solving", {})
+    if solving.get("present") and not (
+        solving.get("referenced_evidence_count") or solving.get("referenced_numeric_count")
+    ):
+        findings.append(
+            {
+                "severity": "medium",
+                "area": "writing",
+                "message": "The solving section does not explicitly cite solver evidence markers.",
+                "suggestion": "Reference evidence markers, numeric results, or generated artifacts directly in the solving section.",
+            }
+        )
+
+    results = report_sources.get("results", {})
+    if results.get("present") and not (
+        results.get("referenced_evidence_count") or results.get("referenced_numeric_count")
+    ):
+        findings.append(
+            {
+                "severity": "high",
+                "area": "writing",
+                "message": "The results section does not explicitly cite solver evidence markers.",
+                "suggestion": "Reference numeric results, artifacts, or evidence items directly in the results section.",
+            }
+        )
 
     return findings
-
-
-def _extract_section(markdown: str, heading: str) -> str:
-    if not markdown.strip():
-        return ""
-    lines = markdown.splitlines()
-    collecting = False
-    bucket: list[str] = []
-    for line in lines:
-        if line.startswith("# "):
-            if collecting:
-                break
-            if line.strip() == heading:
-                collecting = True
-        if collecting:
-            bucket.append(line)
-    return "\n".join(bucket).strip()
 
 
 def _required_section_keys() -> list[str]:

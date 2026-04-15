@@ -1,0 +1,35 @@
+{
+  "points": [
+    {
+      "label": "P1",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "label": "P2",
+      "x": 10.0,
+      "y": 0.0
+    }
+  ],
+  "measurements": [
+    {
+      "label": "P1",
+      "x": 0.0,
+      "y": 0.0,
+      "angle_deg": 45.0
+    },
+    {
+      "label": "P2",
+      "x": 10.0,
+      "y": 0.0,
+      "angle_deg": 135.0
+    }
+  ],
+  "estimated_x": 5.0,
+  "estimated_y": 5.0,
+  "mean_residual_deg": 0.0,
+  "max_residual_deg": 0.0,
+  "formation_center_x": null,
+  "formation_center_y": null,
+  "formation_radius": null
+}

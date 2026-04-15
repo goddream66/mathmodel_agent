@@ -1,8 +1,11 @@
 Problem statement:
 {problem_text}
 
-Return a JSON array. Each item should include:
-- title: string
+Existing subproblems from the rule-based decomposition stage:
+{existing_subproblems_json}
+
+Return a JSON array. Each item must include:
+- title: string, and it should stay aligned with the existing decomposition whenever possible
 - text: string
 - task_types: string[]
 - candidate_models: string[]
@@ -12,7 +15,7 @@ Return a JSON array. Each item should include:
 - evaluation: string[]
 - notes: string[]
 - objective: string
-- constraints: string[]
+- constraints: string[] with explicit hard/soft constraints, not placeholder text
 - assumptions: string[]
 - deliverables: string[]
 - formulation_steps: string[]

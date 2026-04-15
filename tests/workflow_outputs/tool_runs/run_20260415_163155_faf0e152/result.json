@@ -1,0 +1,46 @@
+{
+  "subproblem_title": "问题2",
+  "status": "partial",
+  "method": "线性规划",
+  "objective": "在满足约束的前提下最大化收益、效率或覆盖率。",
+  "assumptions": [
+    "变量定义清晰且可以被观测、估计或求解。",
+    "原始题面没有说明的外部环境在分析周期内保持相对稳定。",
+    "成本、收益或资源参数在求解区间内可视为已知。"
+  ],
+  "constraints": [
+    "题目文本中存在显式约束，需要转写为数学不等式或逻辑条件。",
+    "需要明确资源上限、容量约束和业务规则。"
+  ],
+  "result_summary": "Generated a baseline feasible decision note using stdlib.",
+  "evidence": [
+    "template_used=baseline_optimization_template",
+    "library_used=stdlib",
+    "table_name=none",
+    "cost_column=none",
+    "value_column=none",
+    "budget=0.0",
+    "candidate_cost_count=0",
+    "chosen_cost=0.0"
+  ],
+  "numeric_results": {
+    "budget": 0.0,
+    "candidate_cost_count": 0,
+    "chosen_cost": 0.0,
+    "selected_value": 0.0,
+    "remaining_budget": 0.0,
+    "selected_item_count": 0
+  },
+  "figure_titles": [
+    "问题2：候选成本与入选方案对比"
+  ],
+  "artifacts": [
+    "result.json",
+    "optimization_summary.json",
+    "optimization_plan.svg"
+  ],
+  "next_steps": [
+    "Translate the subproblem into decision variables, objective, and constraints.",
+    "Use a proper LP/MIP solver when tabular data becomes available."
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "weights": [
+    9.0,
+    4.0,
+    7.0,
+    3.0
+  ],
+  "edge_count_estimate": 3,
+  "path_cost": 23.0,
+  "shortest_path": [
+    "N0",
+    "N1",
+    "N2",
+    "N3",
+    "N4"
+  ]
+}

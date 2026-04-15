@@ -1,0 +1,42 @@
+{
+  "subproblem_title": "Problem 1",
+  "status": "ok",
+  "method": "基线模型 + 对比实验",
+  "objective": "把题目转写成可计算、可解释、可验证的模型。",
+  "assumptions": [
+    "变量定义清晰且可以被观测、估计或求解。",
+    "原始题面没有说明的外部环境在分析周期内保持相对稳定。"
+  ],
+  "constraints": [
+    "Additional geometric measurements may be required for a unique exact solution."
+  ],
+  "result_summary": "Generated a geometry-focused structured result using bearing_triangulation with scipy_least_squares.",
+  "evidence": [
+    "template_used=geometry_localization_template",
+    "solver_mode=bearing_triangulation",
+    "library_used=scipy_least_squares",
+    "point_count=2",
+    "measurement_count=2",
+    "table_name=none"
+  ],
+  "numeric_results": {
+    "point_count": 2,
+    "measurement_count": 2,
+    "estimated_x": 5.0,
+    "estimated_y": 5.0,
+    "mean_residual_deg": 0.0,
+    "max_residual_deg": 0.0
+  },
+  "figure_titles": [
+    "Problem 1: geometry layout and estimated position"
+  ],
+  "artifacts": [
+    "result.json",
+    "geometry_summary.json",
+    "geometry_layout.svg"
+  ],
+  "next_steps": [
+    "Provide more anchor or angle measurements if a more stable localization result is required.",
+    "Add explicit geometric constraints such as equal-distance or formation spacing for a stronger solver."
+  ]
+}

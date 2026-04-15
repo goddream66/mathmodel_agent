@@ -1,0 +1,193 @@
+{
+  "session_id": "659e8d68a42e4d348588844cee565e5f",
+  "source": {
+    "report_md": "outputs/web_sessions/659e8d68a42e4d348588844cee565e5f/outputs/report.md",
+    "state_snapshot": "outputs/web_sessions/659e8d68a42e4d348588844cee565e5f/outputs/state_snapshot.json"
+  },
+  "summary": {
+    "overall_status": "needs_attention",
+    "core_problem": "报告表面结构完整，但结构化状态、求解结果和报告正文之间存在明显不一致，而且当前求解器仍停留在 baseline 占位层面。",
+    "priority_order": [
+      "subproblem_alignment",
+      "modeling_constraints",
+      "solver_placeholder_outputs",
+      "evidence_citation_consistency"
+    ]
+  },
+  "issues": [
+    {
+      "id": "subproblem_alignment",
+      "severity": "high",
+      "title": "子问题拆分与报告编号体系不一致",
+      "symptoms": [
+        "state_snapshot 中只有两个子问题：问题 1、问题 2。",
+        "report.md 正文却按“问题1(1)”“问题1(2)”“问题1(3)”“问题2”展开。",
+        "分析器因此无法稳定把 report 中的论述映射回 state 中真实的 subproblem。"
+      ],
+      "evidence": {
+        "state_snapshot_subproblem_count": 2,
+        "state_snapshot_titles": [
+          "问题 1",
+          "问题 2"
+        ],
+        "report_behavior": "报告将问题 1 人工拆成了三个小节，但这些小节并不对应 state 中的真实 subproblem 标题。"
+      },
+      "root_cause": [
+        "MODELING 阶段没有把原题拆成真正结构化的多个子问题。",
+        "WRITING 阶段自行改写了子问题命名和编号体系。"
+      ],
+      "solution": {
+        "goal": "让 state 中的 subproblem 与 report 中的小节一一对应。",
+        "actions": [
+          "修改 ModelingAgent 的拆题输出，使其直接生成与最终报告一致的子问题标题。",
+          "修改 WritingAgent，强制使用 state.subproblems 中的 title 作为小节标题，不允许自行改名。",
+          "在 Review 阶段增加一致性检查：若报告标题与 subproblem_title 不一致，则直接给出高优先级 finding。"
+        ],
+        "files_to_update": [
+          "src/mathagent/agents/specialists_v3.py",
+          "src/mathagent/prompts.py",
+          "templates/prompts/modeling_user.md",
+          "templates/prompts/writing_user.md"
+        ]
+      }
+    },
+    {
+      "id": "modeling_constraints",
+      "severity": "high",
+      "title": "结构化建模字段中的 constraints 仍是占位内容",
+      "symptoms": [
+        "分析器提示：问题 1 still lacks explicit constraints。",
+        "分析器提示：问题 2 still lacks explicit constraints。",
+        "求解结果中的 constraints 仍然是 'Formal constraints still need to be written explicitly.'"
+      ],
+      "evidence": {
+        "state_findings": [
+          "问题 1 still lacks explicit constraints.",
+          "问题 2 still lacks explicit constraints."
+        ],
+        "solver_result_constraints": [
+          "Formal constraints still need to be written explicitly."
+        ]
+      },
+      "root_cause": [
+        "MODELING 阶段没有把硬约束和软约束真正写入 subproblem.analysis.constraints。",
+        "WRITING 虽然在正文里补了约束表格，但没有回写到结构化状态。"
+      ],
+      "solution": {
+        "goal": "让 constraints 先在结构化 state 中完整存在，再进入报告生成。",
+        "actions": [
+          "修改建模提示词，明确要求每个子问题输出可计算的 hard constraints 和 soft constraints。",
+          "在 ModelingAgent 后处理阶段过滤占位约束文本；如果仍是占位值，则标记为 needs_attention。",
+          "在 WritingAgent 中优先引用 structured_result.constraints 和 analysis.constraints，而不是临时编写。"
+        ],
+        "files_to_update": [
+          "src/mathagent/prompts.py",
+          "templates/prompts/modeling_system.md",
+          "templates/prompts/modeling_user.md",
+          "src/mathagent/agents/specialists_v3.py"
+        ]
+      }
+    },
+    {
+      "id": "solver_placeholder_outputs",
+      "severity": "high",
+      "title": "CODING 阶段仍在输出 baseline 占位求解结果",
+      "symptoms": [
+        "report.md 明确写出 baseline_structured_solver 和通用模板占位性质。",
+        "numeric_results 只是题面数字统计，例如 number_count=55、mean_value=47.1527。",
+        "问题 2 使用的方法名与当前几何定位任务不匹配。"
+      ],
+      "evidence": {
+        "problem_1_evidence_markers": [
+          "template_used=baseline_structured_solver",
+          "number_count=55"
+        ],
+        "problem_2_evidence_markers": [
+          "template_used=baseline_structured_solver",
+          "number_count=20"
+        ],
+        "report_statements": [
+          "上面的数值需要结合具体求解器进行复核。",
+          "当前方法仍是占位方案，尚未替换为真实领域求解器。"
+        ]
+      },
+      "root_cause": [
+        "LLM 生成的代码没有产出真正的领域求解器，最终退化为 generic baseline template。",
+        "当前 fallback solver 更擅长做通用数字统计，不适合几何定位与编队优化问题。"
+      ],
+      "solution": {
+        "goal": "把占位模板替换为真实可执行的领域求解器。",
+        "actions": [
+          "为相关子问题实现基于角度约束的非线性最小二乘求解器，可用 scipy.optimize.least_squares。",
+          "实现显式的约束分析器，不再用题面数字统计代替求解答案。",
+          "为编队与定位任务实现几何校正或等距约束优化器，输出坐标、误差和收敛指标。",
+          "在 Review 阶段新增规则：如果 evidence 中出现 template_used=baseline_structured_solver，则默认标记为未完成求解。"
+        ],
+        "files_to_update": [
+          "src/mathagent/agents/specialists_v3.py",
+          "src/mathagent/prompts.py",
+          "templates/prompts/coding_system.md",
+          "templates/prompts/coding_user.md"
+        ]
+      }
+    },
+    {
+      "id": "evidence_citation_consistency",
+      "severity": "medium",
+      "title": "报告中的 evidence 引用不稳定，结果章节没有显式引用 solver marker",
+      "symptoms": [
+        "分析器提示：The report does not consistently cite evidence for 问题 1。",
+        "分析器提示：The report does not consistently cite evidence for 问题 2。",
+        "分析器提示：The results section does not explicitly cite solver evidence markers。"
+      ],
+      "evidence": {
+        "state_findings": [
+          "The report does not consistently cite evidence for 问题 1.",
+          "The report does not consistently cite evidence for 问题 2.",
+          "The results section does not explicitly cite solver evidence markers."
+        ],
+        "report_behavior": "analysis 部分出现了 evidence marker，但摘要、建模、结果、结论等章节没有稳定复用这些 marker。"
+      },
+      "root_cause": [
+        "WritingAgent 没有强制把 structured_result.evidence 嵌入每个相关章节。",
+        "当前报告只在局部区域引用 evidence，跨章节一致性不足。"
+      ],
+      "solution": {
+        "goal": "让报告正文中的每个关键章节都显式引用结构化证据。",
+        "actions": [
+          "修改 Writing 提示词，要求每个子问题在 analysis、solving、results、conclusion 中至少引用一个 evidence marker 或 numeric_results 字段。",
+          "在 WritingAgent 中自动渲染“证据”“数值结果”小段落，而不是完全依赖 LLM 自由发挥。",
+          "在 Review 阶段把“results 节未引用 evidence”从 medium 提升为 hard check，未通过则不标记 final_review_done。"
+        ],
+        "files_to_update": [
+          "src/mathagent/prompts.py",
+          "templates/prompts/writing_system.md",
+          "templates/prompts/writing_user.md",
+          "src/mathagent/agents/specialists_v3.py"
+        ]
+      }
+    }
+  ],
+  "recommended_execution_order": [
+    {
+      "step": 1,
+      "issue_id": "subproblem_alignment",
+      "reason": "先统一子问题标题和状态映射，否则后续求解与报告无法稳定对齐。"
+    },
+    {
+      "step": 2,
+      "issue_id": "modeling_constraints",
+      "reason": "先让建模字段完整，后面的求解和审查才有可靠输入。"
+    },
+    {
+      "step": 3,
+      "issue_id": "solver_placeholder_outputs",
+      "reason": "这是当前最核心的业务问题，直接决定报告是否具备真实建模有效性。"
+    },
+    {
+      "step": 4,
+      "issue_id": "evidence_citation_consistency",
+      "reason": "在结构化状态和求解结果稳定后，再修正文档引用链最合适。"
+    }
+  ]
+}

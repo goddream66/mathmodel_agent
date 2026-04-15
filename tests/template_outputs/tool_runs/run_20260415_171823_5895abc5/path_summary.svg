@@ -1,0 +1,8 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='720' height='420' viewBox='0 0 720 420'>
+<rect width='100%' height='100%' fill='white'/>
+<text x='360.0' y='28' font-size='22' text-anchor='middle' fill='#111827'>Problem 3：路径权重与总代价示意</text>
+<text x='680' y='50' font-size='14' text-anchor='end' fill='#111827'>total=23.00</text>
+<line x1='60' y1='360' x2='690' y2='360' stroke='#111827' stroke-width='2'/>
+<rect x='70' y='242.6' width='32' height='117.4' fill='#0f766e' rx='4'/><rect x='140' y='307.8' width='32' height='52.2' fill='#0f766e' rx='4'/><rect x='210' y='268.7' width='32' height='91.3' fill='#0f766e' rx='4'/><rect x='280' y='320.9' width='32' height='39.1' fill='#0f766e' rx='4'/>
+<text x='86' y='380' font-size='12' text-anchor='middle'>w1</text><text x='156' y='380' font-size='12' text-anchor='middle'>w2</text><text x='226' y='380' font-size='12' text-anchor='middle'>w3</text><text x='296' y='380' font-size='12' text-anchor='middle'>w4</text>
+</svg>
